@@ -162,7 +162,7 @@ Révisée le 30/09/2026 : plus d'intégrateur unique. Chacun fusionne ses propre
 - Les deux humains sont dans la même pièce. La voix reste le canal le plus rapide pour les décisions ; le protocole ci-dessous sert à ce que les Claude, eux, voient l'état sans qu'on le leur répète.
 
 Ce que dit la doc Claude Code, utile ici [lu, code.claude.com/docs] :
-- La messagerie entre sessions (`SendMessage`) relie les sessions **d'un même compte** (même machine, ou autres machines via Remote Control). Elle ne relie pas le compte de Benjamin à celui de Floriane. Entre les deux, il n'y a que git et GitHub.
+- La messagerie entre sessions (`SendMessage`) relie les sessions **d'un même compte** (même machine, ou autres machines via Remote Control). Elle ne relie pas le compte de Benjamin à celui de Floriane. D'où le canal Arena (2.3, point 9) : une table Supabase que les hooks des deux côtés alimentent et lisent.
 - Les « agent teams » (task list partagée, claims) sont expérimentales, limitées à une session et une machine.
 - Les hooks de `.claude/settings.json` du dépôt s'exécutent aussi dans les sous-agents et sont versionnables. Ils exigent que chaque personne ait accepté la confiance du dossier sur sa machine.
 - Dans un worktree, `${CLAUDE_PROJECT_DIR}` reste le dépôt principal, et le champ `cwd` du JSON reçu par le hook est le worktree. Les scripts ci-dessous utilisent `cwd`.
@@ -180,6 +180,7 @@ Critères : (a) travail simultané ; (b) chaque Claude voit l'état au démarrag
 | **Hooks versionnés** | pas concerné | **oui, à chaque prompt** | **oui, mécaniquement** | indirect | Le seul moyen de garantir (b) et (c) face à un Claude qui n'a pas relu l'état. |
 | **Zones d'appartenance par dossier** | oui | oui | **oui, structurellement** | **oui** : des fichiers différents se fusionnent sans conflit, dans n'importe quel ordre | La base de tout. |
 | **Verrou sur la zone partagée** | oui | oui (visible dans l'état) | oui pour les fichiers communs | oui : un seul à la fois sur les types, routes, deps | Remplace l'intégrateur unique sans recréer de goulot. |
+| **Canal Arena (table Supabase alimentée par les hooks)** | oui | **oui, au niveau du prompt et du fichier**, pas seulement de la PR | indirect (on voit qui modifie quoi) | pas concerné | Seul moyen de voir ce que l'autre demande à son Claude, puisque les prompts ne passent jamais par git. |
 | **Déploiement automatique sur `main`** | oui | oui (le SHA en ligne) | pas concerné | **oui** : personne ne déploie un `main` local en retard | Condition pour que chacun puisse fusionner seul. |
 
 ### 2.3 Recommandation
@@ -195,6 +196,8 @@ Critères : (a) travail simultané ; (b) chaque Claude voit l'état au démarrag
 7. **Garde-fous.** PreToolUse sur Edit/Write refuse : écrire sur `main` (pour tout le monde), écrire dans la zone de l'autre, écrire en zone partagée sans le verrou. La protection de branche GitHub sur `main` (PR obligatoire, sans review) empêche aussi un push direct fait en Bash.
 8. **Identité de chaque machine** : `.arena-owner` ignoré par git, contenant `ben` ou `flo`, lu par les hooks (repli sur le dépôt principal depuis un worktree, puis sur le préfixe de branche).
 
+9. **Canal Arena.** Les prompts ne passent jamais par git : sans canal, un Claude ne voit l'autre côté qu'au rythme des PR et des commits. Une table Supabase `arena_events` comble ce trou. À chaque prompt, un hook y inscrit les 200 premiers caractères de la demande ; à chaque fichier modifié, son chemin (une fois par fichier, pas à chaque retouche). L'état injecté à chaque prompt affiche ce qui s'est passé ailleurs dans l'équipe depuis 3 minutes, sessions de l'autre machine comme autres sessions de la sienne. Un Claude peut aussi écrire à l'autre côté (`arena-bus.sh say "…"`) : le message s'affiche au prompt suivant de l'autre, pendant 10 minutes. La table est protégée par un secret partagé que seules vos deux machines connaissent, puisque la clé Supabase de l'app finit publique dans le bundle.
+
 Ce qui reste à la voix : les décisions de scope, et l'annonce « j'ai fusionné un changement partagé, rebasez ».
 
 ### 2.4 Une tâche, vue par un Claude
@@ -203,7 +206,7 @@ Ce qui reste à la voix : les décisions de scope, et l'annonce « j'ai fusionn�
 2. Le CLAUDE.md lui dit de rebaser s'il est en retard, puis de créer sa PR draft s'il n'en a pas.
 3. Il écrit dans `src/features/board/`. Il a besoin d'un champ dans `src/shared/types.ts` : le hook refuse et lui explique comment prendre le verrou. Il le dit à son humain, qui valide ; il ouvre une petite branche `flo/shared-types` avec une PR draft `zone:shared`, fait la modification, fusionne aussitôt, et reprend sa feature après `git rebase origin/main`.
 4. Il commit et pousse toutes les 5 à 8 minutes. Quand la feature tient : rebase, push, `gh pr ready`, `gh pr merge --squash`. L'Action déploie. Son compte rendu se termine par « PR #N fusionnée · fichiers : … ».
-5. Côté Benjamin, le prochain prompt affiche la fusion de Floriane dans l'état, sans que personne n'ait rien dit.
+5. Côté Benjamin, chaque prompt affichait déjà, via le canal Arena, « flo · flo/board · demande : ajoute la liste des cartes » puis « modifie src/features/board/List.tsx ». Le prochain affiche aussi la fusion, sans que personne n'ait rien dit.
 
 ### 2.5 Sessions et sous-agents sur une même machine
 
@@ -234,6 +237,8 @@ Ce qui reste à la voix : les décisions de scope, et l'annonce « j'ai fusionn�
 | Un Claude qui ne relit pas l'état | Il n'a pas le choix : l'état est injecté à chaque prompt et les écritures interdites sont refusées. |
 | Un push direct sur `main` en Bash | Le hook ne voit que Edit/Write. La protection de branche GitHub refuse le push, et `settings.json` interdit `git push origin main`. |
 | `gh` indisponible | Le hook d'état affiche « gh indisponible ». Le hook de zones refuse l'écriture en zone partagée tant que le verrou ne peut pas être vérifié ; on décide à voix haute. |
+| Le canal Arena ne répond pas | L'état affiche « canal Arena injoignable » et tout le reste continue : le canal n'est qu'un complément des PR. Les envois partent en arrière-plan et ne ralentissent jamais un prompt. |
+| Un secret dans un prompt | Il partirait dans la table. Même règle que pour l'écran projeté : jamais de secret dans un prompt. |
 | Le hook plante | `"disableAllHooks": true` dans `.claude/settings.local.json` de la machine concernée, décidé à voix haute. |
 | Une machine tombe | Tout est sur GitHub toutes les 8 minutes au pire. L'autre machine ouvre un worktree sur la branche orpheline et continue. |
 
@@ -272,6 +277,11 @@ Une seule PR par tâche. Si une PR du même nom existe déjà, je m'arrête et j
 - Si le hook dit que le verrou est pris, j'attends et je le dis à mon humain.
 - Changement minimal, puis tout de suite : push, `gh pr ready`, `gh pr merge --squash`. Le verrou se libère à la fusion.
 - Mon humain annonce à voix haute : « partagé fusionné, rebasez ».
+
+## Canal Arena : savoir ce que fait l'autre côté, et lui écrire
+- L'état m'affiche aussi ce qui s'est passé ailleurs dans l'équipe (demandes, fichiers modifiés) et les messages qui me sont adressés.
+  Si l'autre côté modifie un fichier dont je dépends, j'en tiens compte. Si un message m'est adressé, je le signale à mon humain.
+- Pour prévenir l'autre côté (partagé fusionné, besoin d'un champ, blocage) : `bash .claude/hooks/arena-bus.sh say "<une phrase>"`.
 
 ## Pendant le travail
 - Commit + push toutes les 5 à 8 minutes, message préfixé par la zone : `board: liste des cartes`.
@@ -409,7 +419,7 @@ Le pied de page de l'app affiche `import.meta.env.VITE_SHA` tronqué à 7 caract
 
 #### `.claude/settings.json`
 
-Structure des hooks vérifiée contre la doc (code.claude.com/docs/en/hooks). Les permissions laissent passer git et gh sans question, mais interdisent le push direct sur `main`, le push forcé sans `--force-with-lease` et le reset dur.
+Structure des hooks vérifiée contre la doc (code.claude.com/docs/en/hooks). Le canal Arena ajoute un envoi à chaque prompt (UserPromptSubmit) et à chaque fichier modifié (PostToolUse). Les permissions laissent passer git et gh sans question, mais interdisent le push direct sur `main`, le push forcé sans `--force-with-lease` et le reset dur.
 
 ```json
 {
@@ -433,6 +443,23 @@ Structure des hooks vérifiée contre la doc (code.claude.com/docs/en/hooks). Le
             "type": "command",
             "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/arena-state.sh\"",
             "timeout": 15
+          },
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/arena-bus.sh\" post-prompt",
+            "timeout": 5
+          }
+        ]
+      }
+    ],
+    "PostToolUse": [
+      {
+        "matcher": "Edit|Write|NotebookEdit",
+        "hooks": [
+          {
+            "type": "command",
+            "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/arena-bus.sh\" post-edit",
+            "timeout": 5
           }
         ]
       }
@@ -462,7 +489,8 @@ Structure des hooks vérifiée contre la doc (code.claude.com/docs/en/hooks). Le
       "Bash(git rebase*)",
       "Bash(git push*)",
       "Bash(gh pr *)",
-      "Bash(pnpm *)"
+      "Bash(pnpm *)",
+      "Bash(bash .claude/hooks/arena-bus.sh say *)"
     ],
     "deny": [
       "Bash(git push origin main*)",
@@ -531,6 +559,7 @@ fi
     printf '%s' "$PRS" | jq -r 'if length == 0 then "- (aucune)" else sort_by(.number)[] | "- #\(.number) \(if .isDraft then "[en cours]" else "[prête]" end) \(.title) · \(.headRefName) · \(.author.login)\(if any(.labels[]; .name == "zone:shared") then " · zone partagée" else "" end)" end'
     echo "### Verrou partagé : $(printf '%s' "$PRS" | jq -r '[.[] | select(any(.labels[]; .name == "zone:shared"))] | sort_by(.number) | if length == 0 then "libre" else "pris par #\(.[0].number) (\(.[0].headRefName))" end')"
   fi
+  bash "$(dirname "$0")/arena-bus.sh" read "$CWD"
   [ -f "$ROOT/PLAN.md" ] && { echo "### PLAN.md"; cat "$ROOT/PLAN.md"; }
   [ -f "$ROOT/ZONES" ] && { echo "### ZONES"; grep -v '^#' "$ROOT/ZONES"; }
 } | tee "$CACHE"
@@ -599,6 +628,114 @@ fi
 deny "$REL appartient à la zone de $OWNER, pas à $ME. Reste dans ta zone, ou demande à $OWNER."
 ```
 
+#### `.claude/hooks/arena-bus.sh` (le canal Arena)
+
+```bash
+#!/bin/bash
+# Canal Arena : ce que fait chaque Claude, visible par tous les autres, via la table Supabase arena_events.
+#   arena-bus.sh post-prompt | post-edit   hooks UserPromptSubmit et PostToolUse (JSON sur stdin)
+#   arena-bus.sh read <cwd>                appelé par arena-state.sh
+#   arena-bus.sh say "<message>"           Claude, en Bash, pour écrire à l'autre côté
+# Sans ARENA_BUS_* dans .env.local, ne fait rien.
+MODE="$1"; shift
+case "$MODE" in
+  post-*) INPUT=$(cat); CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // empty') ;;
+  read) CWD="$1" ;;
+  *) CWD=$(pwd) ;;
+esac
+ROOT=$(git -C "${CWD:-.}" rev-parse --show-toplevel 2>/dev/null) || exit 0
+MAIN=$(cd "$ROOT" && cd "$(git rev-parse --git-common-dir)/.." 2>/dev/null && pwd)
+
+find_file() { for d in "$ROOT" "$MAIN"; do [ -f "$d/$1" ] && { echo "$d/$1"; return; }; done; }
+ENVF=$(find_file .env.local)
+[ -z "$ENVF" ] && exit 0
+conf() { grep -E "^$1=" "$ENVF" | head -n1 | cut -d= -f2- | tr -d '"'"'"; }
+URL=$(conf ARENA_BUS_URL); KEY=$(conf ARENA_BUS_KEY); SECRET=$(conf ARENA_BUS_SECRET)
+{ [ -z "$URL" ] || [ -z "$KEY" ] || [ -z "$SECRET" ]; } && exit 0
+
+BRANCH=$(git -C "$ROOT" branch --show-current 2>/dev/null)
+ME=$(head -n1 "$(find_file .arena-owner)" 2>/dev/null | tr -d '[:space:]')
+[ -z "$ME" ] && ME="${BRANCH%%/*}"
+case "$ME" in ben) OTHER=flo ;; flo) OTHER=ben ;; *) OTHER="" ;; esac
+
+api() { curl -sf -m 3 -H "apikey: $KEY" -H "x-arena-secret: $SECRET" "$@"; }
+post() {   # post <kind> <body> [destinataire]
+  api -X POST "$URL/rest/v1/arena_events" -H "Content-Type: application/json" -H "Prefer: return=minimal" \
+    -d "$(jq -nc --arg who "$ME" --arg br "$BRANCH" --arg k "$1" --arg b "$2" --arg to "$3" \
+          '{who:$who, branch:$br, kind:$k, body:$b, to_who:(if $to == "" then null else $to end)}')"
+}
+since() { date -u -v-"$1"M +%Y-%m-%dT%H:%M:%SZ 2>/dev/null || date -u -d "-$1 min" +%Y-%m-%dT%H:%M:%SZ; }
+HOUR='(.created_at[0:19] + "Z" | fromdate | strflocaltime("%H:%M:%S"))'
+
+case "$MODE" in
+  post-prompt)
+    P=$(printf '%s' "$INPUT" | jq -r '.prompt // empty' | tr '\n' ' ' | cut -c1-200)
+    [ -n "$P" ] && { post prompt "$P" >/dev/null 2>&1 & }
+    ;;
+  post-edit)
+    FILE=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.notebook_path // empty')
+    REL="${FILE#"$ROOT"/}"
+    { [ -z "$FILE" ] || [ "$REL" = "$FILE" ]; } && exit 0
+    LAST="${TMPDIR:-/tmp}/arena-last-edit-$(printf '%s' "$INPUT" | jq -r '.session_id // "x"')"
+    [ "$(cat "$LAST" 2>/dev/null)" = "$REL" ] && exit 0   # même fichier que la dernière fois : on ne répète pas
+    printf '%s' "$REL" > "$LAST"
+    post edit "$REL" >/dev/null 2>&1 &
+    ;;
+  say)
+    MSG="$*"
+    [ -z "$MSG" ] && { echo "Usage : bash .claude/hooks/arena-bus.sh say \"message\""; exit 1; }
+    [ -z "$OTHER" ] && { echo "Identité inconnue : crée .arena-owner (ben ou flo)."; exit 1; }
+    if post msg "$MSG" "$OTHER"; then echo "Message envoyé à $OTHER : $MSG"; else echo "Échec de l'envoi : canal Arena injoignable."; exit 1; fi
+    ;;
+  read)
+    Q="select=created_at,who,branch,kind,body&order=created_at.desc"
+    EVENTS=$(api "$URL/rest/v1/arena_events?$Q&kind=neq.msg&branch=neq.$BRANCH&created_at=gt.$(since 3)&limit=12") \
+      || { echo "### Canal Arena : injoignable"; exit 0; }
+    MSGS=$(api "$URL/rest/v1/arena_events?$Q&kind=eq.msg&to_who=eq.$ME&created_at=gt.$(since 10)&limit=5")
+    echo "### Ailleurs dans l'équipe, 3 dernières minutes (canal Arena)"
+    printf '%s' "$EVENTS" | jq -r "if length == 0 then \"- (rien)\" else .[] | \"- \" + $HOUR + \" · \" + .who + \" · \" + .branch + \" · \" + (if .kind == \"prompt\" then \"demande : \" else \"modifie \" end) + .body end"
+    if [ -n "$MSGS" ] && [ "$MSGS" != "[]" ]; then
+      echo "### Messages pour moi ($ME), 10 dernières minutes"
+      printf '%s' "$MSGS" | jq -r ".[] | \"- \" + $HOUR + \" · de \" + .who + \" (\" + .branch + \") : \" + .body"
+    fi
+    ;;
+esac
+exit 0
+```
+
+#### Table du canal Arena (à coller une fois dans l'éditeur SQL du projet Supabase « arena »)
+
+`LE_SECRET` est remplacé par la valeur de `ARENA_BUS_SECRET`, générée par `openssl rand -hex 16`. Le secret vit dans la base et dans le `.env.local` des deux machines, jamais dans le dépôt public. Les policies lisent l'en-tête `x-arena-secret` envoyé par le script : sans lui, la clé anon publique de l'app ne donne accès à rien.
+
+```sql
+create table public.arena_events (
+  id bigint generated always as identity primary key,
+  created_at timestamptz not null default now(),
+  who text not null,
+  branch text not null default '',
+  kind text not null check (kind in ('prompt', 'edit', 'msg')),
+  body text not null,
+  to_who text
+);
+create index on public.arena_events (created_at desc);
+alter table public.arena_events enable row level security;
+grant select, insert on public.arena_events to anon;
+create policy arena_lire on public.arena_events for select to anon
+  using ((current_setting('request.headers', true)::json ->> 'x-arena-secret') = 'LE_SECRET');
+create policy arena_ecrire on public.arena_events for insert to anon
+  with check ((current_setting('request.headers', true)::json ->> 'x-arena-secret') = 'LE_SECRET');
+```
+
+#### `.env.local` (un par machine, ignoré par git, copié dans les worktrees par `.worktreeinclude`)
+
+```text
+ARENA_BUS_URL=https://<projet>.supabase.co
+ARENA_BUS_KEY=<clé anon ou publishable du projet>
+ARENA_BUS_SECRET=<le même secret sur les deux machines>
+```
+
+Sans ces trois lignes, le canal se tait et tout le reste fonctionne.
+
 Après copie : `chmod +x .claude/hooks/*.sh`. Les deux scripts n'ont besoin que de `bash`, `git`, `jq` et `gh`, à vérifier chez Floriane.
 
 Limites connues :
@@ -647,7 +784,8 @@ Dans Settings du dépôt :
 - [ ] Chacun crée son `.arena-owner`.
 - [ ] Machines : Node 22+, `pnpm`, `gh` connecté, `jq`, `wrangler` (Benjamin : **absent**, `pnpm add -g wrangler && wrangler login`), `cloudflared` (secours), Claude Code à jour.
 - [ ] Benjamin : créer le projet Pages `arena` et le jeton API « Cloudflare Pages : Edit », à transmettre à Floriane pour les secrets.
-- [ ] Supabase : un projet vide « arena » créé, URL et clé anon notées, à ne remplir qu'à T+6 si le brief l'exige.
+- [ ] Supabase : un projet « arena » créé, URL et clé anon notées. Seule la table `arena_events` du canal y est créée d'avance ; celles de l'app, à T+6 si le brief l'exige.
+- [ ] Canal Arena : générer le secret, créer la table (2.7), remplir `.env.local` sur les deux machines. Test : chacun envoie un `say` et vérifie qu'il s'affiche au prompt suivant de l'autre.
 
 **Répétition générale (deux fois, une semaine et deux jours avant, 75 minutes chacune)**
 - [ ] Brief inventé par un tiers, chrono réel, deux machines, protocole complet, au moins une prise de verrou partagé chacun, et deux fusions à moins d'une minute d'écart pour voir l'Action les enchaîner.
