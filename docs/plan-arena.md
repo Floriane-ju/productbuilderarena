@@ -60,29 +60,29 @@ Horaires [lu, Luma]. Contenu [supposé], calibré pour deux personnes et 4 à 6 
 - Se mettre d'accord à voix haute sur UNE phrase : « Notre produit permet à [qui] de [quoi] en [combien de temps] ». Si la règle interdit même de discuter avant le top, se taire et le faire à T+0 [supposé : le site dit seulement que rien n'est construit avant].
 
 **T+0 à T+5 : cadrage (les deux, un seul écran)**
-- Écrire dans `PLAN.md` (voir gabarit en 2.7) : la phrase produit, le parcours en 3 écrans max, les 2 features (une par personne), le « wow », la décision base de données (Supabase ou localStorage), qui intègre (Benjamin).
+- Écrire dans `PLAN.md` (voir gabarit en 2.7) : la phrase produit, le parcours en 3 écrans max, les 2 features (une par personne), le « wow », la décision base de données (Supabase ou localStorage).
 - Découper : Benjamin = socle + feature A ; Floriane = feature B + contenu/pitch. Écrire `ZONES` (voir 2.7).
 - Chacun donne à son Claude le brief complet, la phrase produit et sa zone.
 
 **T+5 à T+12 : socle (Benjamin) et préparation (Floriane)**
-- Benjamin, session socle, sur `main` directement (l'intégrateur y a droit) : scaffold Vite React TS, Tailwind, `src/shared/types.ts` (le modèle de données, 20 lignes), `src/routes.tsx` avec des pages vides nommées d'avance, `index.html` (titre, viewport, thème couleur), premier `pnpm ship` : l'URL publique affiche « Hello + nom du produit ». Commit `socle`, push. Annoncer à voix haute « socle poussé ».
+- Benjamin, session socle, sur la branche `ben/socle` avec une PR draft `zone:shared` (il prend le verrou partagé, voir 2.3) : scaffold Vite React TS, Tailwind, `src/shared/types.ts` (le modèle de données, 20 lignes), `src/routes.tsx` avec des pages vides nommées d'avance, `index.html` (titre, viewport, thème couleur). Il fusionne aussitôt (`gh pr merge`) : l'Action GitHub déploie toute seule et l'URL publique affiche « Hello + nom du produit » une à deux minutes plus tard. Annoncer à voix haute « socle fusionné ».
 - Floriane, pendant ce temps, sur sa branche : prompts détaillés de sa feature, données d'exemple (JSON) au format des types, texte des écrans, plan de pitch. Dès que le socle est poussé, `git pull`, et sa session Claude démarre sa feature.
-- Si Supabase : Benjamin crée la table (une seule) et publie l'URL et la clé anon dans `.env` versionné (voir 2.9) dans ce même créneau. Pas de RLS fine : des policies « tout le monde lit et écrit » pour la démo, en le disant à voix haute.
+- Si Supabase : Benjamin, toujours sous le verrou du socle, crée la table (une seule) et publie l'URL et la clé anon dans `.env` versionné (voir 2.9) dans ce même créneau. Pas de RLS fine : des policies « tout le monde lit et écrit » pour la démo, en le disant à voix haute.
 
 **T+12 à T+38 : construction en parallèle**
 - Chaque personne pilote 1 à 2 sessions Claude, chacune dans son worktree et sa branche `ben/<tâche>` ou `flo/<tâche>`, avec une PR draft ouverte dès la première minute (c'est la réservation, voir 2.4).
 - Commit et push toutes les 5 à 8 minutes, même moche. Message court, préfixé par la zone.
-- T+20 : premier point voix, 30 secondes : « où j'en suis, ce qui bloque ». Toute demande de changement en zone partagée (types, routes, deps) passe par Benjamin, à voix haute.
-- T+30 : première fusion sur `main` de ce qui tient (même partiel) + `pnpm ship`. L'URL évolue devant le public.
+- T+20 : premier point voix, 30 secondes : « où j'en suis, ce qui bloque ». Un changement en zone partagée (types, routes, deps, table Supabase) se fait sous le verrou partagé : une petite PR `zone:shared`, fusionnée tout de suite, annoncée à voix haute.
+- Chacun fusionne lui-même sa PR dès qu'un morceau tient (même partiel), sans attendre l'autre. L'Action déploie à chaque fusion : l'URL évolue devant le public.
 
 **T+38 à T+48 : intégration et premier test téléphone**
-- Benjamin fusionne tout ce qui est « prêt » (`gh pr merge`), lance `pnpm ship`, ouvre l'URL sur son téléphone. Floriane la teste sur le sien en même temps, en suivant le parcours du brief.
+- Chacun fusionne ce qu'il a de prêt (`gh pr merge`). Une fois le déploiement fini (SHA du pied de page = dernier commit de `main`), les deux testent l'URL sur leur téléphone en suivant le parcours du brief.
 - On note les 3 bugs les plus visibles. Pas plus. Chacun corrige dans sa zone.
 - Le « wow » démarre ici seulement si le parcours principal tient. Sinon on l'abandonne, sans débat.
 
 **T+48 à T+55 : polish mobile et gel**
 - Hauteurs tactiles, textes lisibles, états vides, messages d'erreur, favicon et titre d'onglet, un pied de page avec le nom du produit.
-- T+53 : gel des features. Dernières fusions, `pnpm ship`, test du parcours complet sur les deux téléphones. Vérifier que c'est bien la nouvelle version qui est en ligne (voir 2.9, propagation Cloudflare).
+- T+52 : gel des features. Dernières fusions, attendre la fin du déploiement (une à deux minutes), test du parcours complet sur les deux téléphones. Vérifier que c'est bien la nouvelle version qui est en ligne (voir 2.9, propagation Cloudflare).
 
 **T+55 à T+60 : pitch**
 - Une répétition à voix basse : 20 s problème, 20 s ce qu'on a fait, 90 s démo sur téléphone projeté, 10 s « testez-le ». Qui parle de quoi. Générer le QR code de l'URL en grand sur un écran.
@@ -104,7 +104,7 @@ La règle lue est courte et absolue : « Nothing is built in advance. » [lu]. C
 
 **Autorisé sans doute (c'est de l'entraînement, pas du livrable)**
 - S'entraîner deux fois en conditions réelles avant le 14 (voir checklist 2.10), sur un brief inventé, puis jeter le code.
-- Connaître par cœur sa stack : quelle commande crée le projet, combien de temps prend le premier `pnpm ship`, comment Vite gère les ports en double.
+- Connaître par cœur sa stack : quelle commande crée le projet, combien de temps prend un déploiement par l'Action GitHub, comment Vite gère les ports en double.
 - Avoir installé et mis à jour : Node, pnpm, wrangler, gh, Claude Code, jq, le dépôt cloné et la confiance du dossier acceptée.
 
 ### 1.5 Stack recommandée
@@ -117,7 +117,7 @@ Contraintes de Benjamin : pnpm obligatoire (un hook global bloque `npm install`)
 | Style | Tailwind v4 (`@import "tailwindcss"` dans un seul CSS) | Zéro config, tout dans le JSX, Claude produit du mobile-first sans friction. Pas de design system importé (règle zero-day). |
 | Routing | react-router, fichier unique `src/routes.tsx` | Une page par écran, chaque feature exporte sa page. Si le produit tient en un écran, pas de router du tout. |
 | Données | localStorage par défaut. Supabase seulement si le brief exige un état partagé entre visiteurs (vote, mur, classement). | Supabase ajoute 5 minutes et un risque. Un état partagé est souvent le « wow » qui fait voter la salle. Décision à T+3, pas après. |
-| Déploiement | `pnpm ship` = `vite build` puis `wrangler pages deploy dist --project-name arena` depuis la machine de Benjamin | 20 à 40 secondes, déterministe, aucune attente de build distant. Pas d'intégration Git Cloudflare : elle exigerait d'installer l'app GitHub de Cloudflare sur le compte de Floriane (propriétaire du dépôt) et ajoute 1 à 3 minutes de build par merge. |
+| Déploiement | Une GitHub Action déploie sur Cloudflare Pages à chaque push sur `main` (fichier en 2.7) | Chacun fusionne quand il veut, et personne ne déploie à la main : la version en ligne est toujours le dernier `main`, jamais un `main` local en retard qui effacerait la feature de l'autre. Deux fusions rapprochées : l'Action annule le déploiement le plus ancien au profit du plus récent, qui contient les deux. Compter une à deux minutes par déploiement. `pnpm ship` reste en secours manuel. |
 | Secours déploiement | Netlify drop ou `pnpm dlx serve dist` + tunnel Cloudflare (`cloudflared tunnel --url http://localhost:4173`) | Si wrangler tombe, un tunnel donne une URL publique en 10 secondes. |
 
 Scripts `package.json` à poser au scaffold :
@@ -131,6 +131,8 @@ Scripts `package.json` à poser au scaffold :
   }
 }
 ```
+
+`ship` ne sert qu'en secours, si l'Action tombe : lancé à la main depuis un `main` à jour (`git pull` d'abord), jamais par deux personnes en même temps.
 
 Note : pas de `tsc -b` dans `build`. Une erreur de type ne doit jamais bloquer un déploiement à T+52. Vite compile le TS sans vérifier les types.
 
@@ -150,92 +152,94 @@ Supabase, si retenu : une table, colonnes en snake_case, `created_at` par défau
 
 ## Partie 2 : deux machines, plusieurs Claude, un seul dépôt
 
+Révisée le 30/09/2026 : plus d'intégrateur unique. Chacun fusionne ses propres PR, le déploiement est automatique, et la zone partagée se prend comme un verrou.
+
 ### 2.1 Le problème, précisément
 
-- Deux machines, deux comptes GitHub, aucune mémoire partagée entre sessions Claude. Le seul point commun est `github.com/Floriane-ju/productbuilderarena` (vide, Floriane propriétaire, Benjamin invité en écriture ; l'invitation n'est pas encore acceptée, `gh repo view` confirme `isEmpty: true`).
+- Deux machines, deux comptes GitHub, aucune mémoire partagée entre sessions Claude. Le seul point commun est `github.com/Floriane-ju/productbuilderarena` (Floriane propriétaire, Benjamin en écriture depuis le 30/09). Le dépôt est **public** : tout ce qu'on y pousse, ce plan compris, est lisible par l'équipe adverse.
 - Sur une même machine, plusieurs sessions peuvent tourner (une par worktree) et chaque session peut lancer des sous-agents, éventuellement chacun dans un worktree (`isolation: "worktree"`).
-- Les deux humains sont dans la même pièce. C'est le canal le plus rapide qui existe et il faut l'utiliser pour tout ce qui est décision. Le protocole ci-dessous ne sert qu'à ce que les Claude, eux, voient l'état sans qu'on le leur répète.
+- La contrainte de base : **chacun avance à son rythme, fusionne quand il est prêt, sans attendre l'autre, et sait vite ce que l'autre fait.**
+- Les deux humains sont dans la même pièce. La voix reste le canal le plus rapide pour les décisions ; le protocole ci-dessous sert à ce que les Claude, eux, voient l'état sans qu'on le leur répète.
 
 Ce que dit la doc Claude Code, utile ici [lu, code.claude.com/docs] :
-- La messagerie entre sessions (`SendMessage`, `/list-agents`) fonctionne entre sessions **de la même machine** via une socket locale, ou vers ses **propres** sessions sur une autre machine via Remote Control. Elle ne relie pas le compte de Benjamin à celui de Floriane. Donc entre machines, il n'y a que git et GitHub.
-- Les « agent teams » (task list partagée avec verrou de fichier, claims) sont expérimentales, limitées à une session et une machine. Pas utilisables entre deux machines.
-- Les hooks de `.claude/settings.json` du dépôt s'exécutent dans les sous-agents aussi, et sont versionnables. Ils exigent que chaque personne ait accepté la confiance du dossier (« workspace trust ») sur sa machine.
+- La messagerie entre sessions (`SendMessage`) relie les sessions **d'un même compte** (même machine, ou autres machines via Remote Control). Elle ne relie pas le compte de Benjamin à celui de Floriane. Entre les deux, il n'y a que git et GitHub.
+- Les « agent teams » (task list partagée, claims) sont expérimentales, limitées à une session et une machine.
+- Les hooks de `.claude/settings.json` du dépôt s'exécutent aussi dans les sous-agents et sont versionnables. Ils exigent que chaque personne ait accepté la confiance du dossier sur sa machine.
 - Dans un worktree, `${CLAUDE_PROJECT_DIR}` reste le dépôt principal, et le champ `cwd` du JSON reçu par le hook est le worktree. Les scripts ci-dessous utilisent `cwd`.
-- Un sous-agent en `isolation: "worktree"` part de la branche par défaut (`origin/main`), pas du HEAD de la session, sauf `worktree.baseRef: "head"`. Son worktree est supprimé s'il n'a rien changé, conservé sinon, avec ses changements sur une branche `worktree-<nom>` que le parent doit fusionner. `claude --worktree <nom>` crée `.claude/worktrees/<nom>` sur la branche `worktree-<nom>` et exige un dépôt avec au moins un commit.
-- `.worktreeinclude` copie dans chaque worktree créé par Claude les fichiers ignorés par git qu'il liste (`.env.local`, etc.). Il ne s'applique pas à `git worktree add` manuel.
+- Un sous-agent en `isolation: "worktree"` part de `origin/main`, pas du HEAD de la session, sauf `worktree.baseRef: "head"`. `.worktreeinclude` copie dans chaque worktree créé par Claude les fichiers ignorés qu'il liste ; il ne s'applique pas à `git worktree add` manuel.
 
-### 2.2 Les pistes, comparées sur ce qui compte à J
+### 2.2 Les pistes, comparées
 
-Critères : (a) travail simultané ; (b) chaque Claude voit l'état au démarrage et pendant ; (c) jamais deux écritures sur le même fichier ; (d) fusions rapides sans conflit. Plus le coût en secondes par opération, parce qu'on en a 60 minutes.
+Critères : (a) travail simultané ; (b) chaque Claude voit l'état au démarrage et pendant ; (c) jamais deux écritures sur le même fichier ; (d) fusions rapides sans conflit, par n'importe qui.
 
-| Piste | (a) | (b) | (c) | (d) | Coût | Verdict |
-| --- | --- | --- | --- | --- | --- | --- |
-| **Issues GitHub + labels + assignation, claim avant de commencer** | oui | bon : `gh issue list` est toujours à jour, sans merge | non par elle-même | neutre | 1 à 2 s par appel gh, une issue à créer par tâche, puis une branche, puis une PR : trois objets pour une tâche de 15 min | Trop d'objets. La PR fait le même travail de registre. |
-| **Fichier de coordination versionné (registre de tâches et de fichiers réservés)** | oui | moyen : il faut `git fetch` et lire `origin/main:FICHIER`, et l'état est faux dès qu'une personne oublie de pousser | oui si tout le monde le lit | **mauvais** : le fichier devient le point de conflit numéro un, chaque réservation est un commit sur `main` qui entre en collision avec les fusions de code | un commit par changement d'état | Bon pour ce qui s'écrit une fois (le plan, les zones). Mauvais comme registre vivant. |
-| **CLAUDE.md commun qui impose le protocole** | pas concerné | oui au démarrage, non pendant (Claude ne le relit pas) | oui si obéi | oui si obéi | zéro | Indispensable mais insuffisant : c'est une consigne, pas un mécanisme. |
-| **Hooks versionnés dans `.claude/settings.json`** | pas concerné | **oui, au démarrage et à chaque prompt** (SessionStart + UserPromptSubmit) | **oui, mécaniquement** (PreToolUse qui refuse l'écriture hors zone) | indirect | 1 à 2 s par prompt (fetch + gh, en cache 45 s) | Le seul moyen de garantir (b) et (c) face à un Claude qui n'a pas relu l'état. |
-| **Zones d'appartenance par dossier, plus zone partagée protégée** | oui | oui (le fichier `ZONES` se lit en 5 lignes) | **oui, structurellement** : deux zones ne partagent aucun fichier | **oui** : git fusionne sans conflit des fichiers différents | zéro pendant le build, 2 min à T+3 | La base de tout. |
-| **Rythme de synchro (petits commits, rebase fréquent, merge régulier, un intégrateur)** | oui | indirect | non | **oui** : des branches courtes et à jour se fusionnent en 2 s | discipline | Nécessaire, à inscrire dans le CLAUDE.md et à rappeler par le hook. |
-
-Deux constats sortent du tableau. D'abord, la seule chose qui rend les conflits impossibles, c'est le découpage par zones ; tout le reste sert à ce que les Claude respectent ce découpage et sachent où en sont les autres. Ensuite, sous chrono, le registre le moins cher est celui qu'on obtient gratuitement : une branche poussée et sa PR draft. `gh pr list` est le tableau de bord, il est atomique côté GitHub, il n'exige aucun commit sur `main`, et il ne peut pas être « oublié » puisqu'on doit de toute façon pousser pour être fusionné.
+| Piste | (a) | (b) | (c) | (d) | Verdict |
+| --- | --- | --- | --- | --- | --- |
+| **Issues GitHub + assignation** | oui | bon | non par elle-même | neutre | Trois objets (issue, branche, PR) pour une tâche de 15 min. La PR seule fait le même travail. |
+| **Fichier de coordination versionné** | oui | moyen (faux dès qu'on oublie de pousser) | oui si lu | **mauvais** : chaque changement d'état est un commit sur `main` qui entre en collision avec les fusions | Bon pour ce qui s'écrit une fois (plan, zones), mauvais comme registre vivant. |
+| **CLAUDE.md commun** | pas concerné | au démarrage seulement | oui si obéi | oui si obéi | Indispensable mais c'est une consigne, pas un mécanisme. |
+| **Hooks versionnés** | pas concerné | **oui, à chaque prompt** | **oui, mécaniquement** | indirect | Le seul moyen de garantir (b) et (c) face à un Claude qui n'a pas relu l'état. |
+| **Zones d'appartenance par dossier** | oui | oui | **oui, structurellement** | **oui** : des fichiers différents se fusionnent sans conflit, dans n'importe quel ordre | La base de tout. |
+| **Verrou sur la zone partagée** | oui | oui (visible dans l'état) | oui pour les fichiers communs | oui : un seul à la fois sur les types, routes, deps | Remplace l'intégrateur unique sans recréer de goulot. |
+| **Déploiement automatique sur `main`** | oui | oui (le SHA en ligne) | pas concerné | **oui** : personne ne déploie un `main` local en retard | Condition pour que chacun puisse fusionner seul. |
 
 ### 2.3 Recommandation
 
-**Découpage par zones + PR draft comme réservation + `main` comme unique point d'intégration, tenu par Benjamin + hooks versionnés qui injectent l'état à chaque prompt et refusent les écritures hors zone.** Le tout décrit dans un `CLAUDE.md` commun de moins de 60 lignes.
+**Zones par dossier + PR draft comme réservation + chacun fusionne ses PR + verrou pour la zone partagée + déploiement par GitHub Action + hooks qui injectent l'état à chaque prompt et refusent les écritures interdites.** Le tout décrit dans un `CLAUDE.md` commun.
 
-Concrètement :
+1. **Zones.** `ZONES` (écrit à T+3, lu par les hooks) liste la zone `shared` (types, routes, `App.tsx`, `main.tsx`, `index.html`, `package.json`, `pnpm-lock.yaml`, CSS global, schéma Supabase), une zone par personne (`src/features/<nom>/`) et une zone `any` (`docs/`, `PLAN.md`, `public/`). Chaque feature exporte une page dont le nom est fixé au socle. Personne n'écrit chez l'autre.
+2. **Réservation = PR draft.** Une tâche commence par : branche `<moi>/<tâche>` depuis `origin/main`, commit vide `start: <tâche>`, push, `gh pr create --draft`. `gh pr list` montre qui fait quoi, des deux côtés, sans aucune écriture dans le dépôt.
+3. **Chacun fusionne ses propres PR**, quand il veut : `gh pr ready` puis `gh pr merge --squash`. Comme deux zones ne partagent aucun fichier, GitHub fusionne sans conflit même si la branche est en retard sur `main`, et l'ordre des fusions n'a pas d'importance.
+4. **Verrou partagé.** Pour toucher la zone `shared`, on ouvre une PR draft avec le label `zone:shared`. Le détenteur du verrou est la plus ancienne PR ouverte portant ce label. Le hook refuse l'écriture en zone partagée à toute autre branche, et dit qui détient le verrou. Les changements partagés sont petits et fusionnés tout de suite : le verrou se libère à la fusion. Le verrou est par branche, pas par personne : deux sessions de Benjamin ne peuvent pas non plus toucher les types en même temps.
+5. **Déploiement automatique.** Une GitHub Action déploie sur Cloudflare Pages à chaque push sur `main`, avec `concurrency` qui annule un déploiement en cours quand un plus récent arrive. La version en ligne est donc toujours le dernier `main`. Personne ne lance `pnpm ship` à la main, sauf en secours.
+6. **État à chaque prompt.** SessionStart et UserPromptSubmit impriment : derniers commits de `origin/main`, PR ouvertes (qui, quoi, en cours ou prête), détenteur du verrou partagé, ma branche, mon retard, et une alerte si la zone partagée a bougé sur `main` depuis ma base. Cache de 15 s par worktree.
+7. **Garde-fous.** PreToolUse sur Edit/Write refuse : écrire sur `main` (pour tout le monde), écrire dans la zone de l'autre, écrire en zone partagée sans le verrou. La protection de branche GitHub sur `main` (PR obligatoire, sans review) empêche aussi un push direct fait en Bash.
+8. **Identité de chaque machine** : `.arena-owner` ignoré par git, contenant `ben` ou `flo`, lu par les hooks (repli sur le dépôt principal depuis un worktree, puis sur le préfixe de branche).
 
-1. **Zones.** `ZONES` (fichier texte, écrit une fois à T+3 par Benjamin, lu par le hook) liste : l'intégrateur, la zone `shared` (types, routes, `App.tsx`, `main.tsx`, `index.html`, `package.json`, `pnpm-lock.yaml`, CSS global), une zone par personne (`src/features/<nom>/`), et une zone `any` (`docs/`, `PLAN.md`). Chaque feature vit dans son dossier et exporte une page dont le nom est fixé à T+3. Personne n'écrit chez l'autre. La zone partagée n'est écrite que par l'intégrateur, sur demande orale.
-2. **Réservation = PR draft.** Une tâche commence par : branche `<moi>/<tâche>` depuis `origin/main`, commit vide `start: <tâche>`, push, `gh pr create --draft --label zone:<moi>`. Fin de tâche : `gh pr ready`. Le titre de la PR est la tâche. `gh pr list` montre qui fait quoi, en cours ou prêt, des deux côtés, sans aucune écriture dans le dépôt.
-3. **Un seul intégrateur.** Benjamin fusionne (`gh pr merge N --merge --delete-branch`) toutes les 8 à 10 minutes et à T+30, T+40, T+48, T+53, puis `pnpm ship`. Floriane ne fusionne jamais elle-même : ça évite deux merges croisés et deux `pnpm ship` concurrents. Si Benjamin est bloqué, il le dit et Floriane prend le rôle pour un cycle ; on ne change pas `ZONES` pour ça.
-4. **Hooks.** SessionStart et UserPromptSubmit impriment l'état (derniers commits de `origin/main`, PR ouvertes, ma branche, mon retard sur `main`, `PLAN.md`, `ZONES`). PreToolUse sur Edit/Write refuse d'écrire hors de sa zone, en zone partagée si on n'est pas l'intégrateur, et sur `main` si on n'est pas l'intégrateur. Le refus contient la marche à suivre, donc le Claude se corrige seul.
-5. **Rythme.** Commit toutes les 5 à 8 min. Avant chaque push : `git fetch && git rebase origin/main` (sans conflit possible si les zones sont respectées, hors zone partagée). Après chaque fusion annoncée à voix haute, chacun rebase.
-6. **Identité de chaque machine** : un fichier `.arena-owner` ignoré par git, contenant `ben` ou `flo`, lu par les hooks (avec repli sur le dépôt principal quand on est dans un worktree, et sur le préfixe de branche sinon).
+Ce qui reste à la voix : les décisions de scope, et l'annonce « j'ai fusionné un changement partagé, rebasez ».
 
-Ce qui reste hors mécanisme et passe par la voix : les décisions de scope, les changements de types ou de routes, les ajouts de dépendances, l'annonce des fusions.
+### 2.4 Une tâche, vue par un Claude
 
-### 2.4 Comment ça se passe pour un Claude, du début à la fin d'une tâche
-
-1. Il démarre (ou reçoit un prompt) : le hook lui imprime l'état partagé. Il sait qu'il est `flo`, sur `flo/board`, 2 commits derrière `main`, que `#4 [en cours] capture form · Benjaminnespou` existe, et que sa zone est `src/features/board/`.
-2. Le CLAUDE.md lui dit de commencer par `git fetch && git rebase origin/main`, puis de créer sa PR draft s'il n'en a pas.
-3. Il écrit dans `src/features/board/`. S'il tente `src/shared/types.ts`, le hook refuse avec « zone partagée, seul l'intégrateur (ben) y écrit : envoie-lui le changement voulu ». Il formule alors le changement en une phrase pour son humain, qui le dit à Benjamin.
-4. Il commit et pousse régulièrement. Avant de finir : rebase, push, `gh pr ready`, et son compte rendu se termine par « PR #N prête, fichiers touchés : … ».
-5. Benjamin voit `[prêt à fusionner]` dans son prochain état, fusionne, ship, annonce.
+1. Il démarre : le hook lui imprime l'état. Il sait qu'il est `flo`, sur `flo/board`, 2 commits derrière `main`, que `#4 [en cours] capture form · ben/capture` existe, que le verrou partagé est libre, et que sa zone est `src/features/board/`.
+2. Le CLAUDE.md lui dit de rebaser s'il est en retard, puis de créer sa PR draft s'il n'en a pas.
+3. Il écrit dans `src/features/board/`. Il a besoin d'un champ dans `src/shared/types.ts` : le hook refuse et lui explique comment prendre le verrou. Il le dit à son humain, qui valide ; il ouvre une petite branche `flo/shared-types` avec une PR draft `zone:shared`, fait la modification, fusionne aussitôt, et reprend sa feature après `git rebase origin/main`.
+4. Il commit et pousse toutes les 5 à 8 minutes. Quand la feature tient : rebase, push, `gh pr ready`, `gh pr merge --squash`. L'Action déploie. Son compte rendu se termine par « PR #N fusionnée · fichiers : … ».
+5. Côté Benjamin, le prochain prompt affiche la fusion de Floriane dans l'état, sans que personne n'ait rien dit.
 
 ### 2.5 Sessions et sous-agents sur une même machine
 
-- **Une session par tâche, dans son propre worktree**, plutôt que des sous-agents en worktree. Raisons : la branche porte le bon nom (`ben/<tâche>`), l'humain voit et pilote chaque session, et rien n'attend la fin d'un sous-agent pour être poussé. Commandes :
+- **Une session par tâche, dans son propre worktree** :
   ```bash
   git fetch origin
   git worktree add ../arena-<tâche> -b ben/<tâche> origin/main
   cd ../arena-<tâche> && pnpm install --prefer-offline && claude
   ```
-  `pnpm install` dans un nouveau worktree prend quelques secondes grâce au store partagé de pnpm. Sur la machine de Benjamin, `.arena-owner` est trouvé par repli dans le dépôt principal, rien à copier.
-- **Les sous-agents restent dans le worktree de leur session**, sans `isolation: "worktree"`, et ne servent qu'à des tâches internes à la zone (une recherche, un composant). Si Benjamin tient vraiment à `isolation: "worktree"`, poser `"worktree": { "baseRef": "head" }` dans `settings.json` pour que le sous-agent parte du HEAD de la branche et non de `main`, puis fusionner sa branche `worktree-<nom>` dans la branche de la session avant de pousser. C'est une étape de plus sous chrono ; je le déconseille.
-- **`claude --worktree <nom>`** marche aussi (crée `.claude/worktrees/<nom>` sur `worktree-<nom>`), mais la branche ne porte pas le préfixe `ben/` : le hook lit alors `.arena-owner` (copié via `.worktreeinclude`), donc ça reste protégé. Renommer la branche avant de pousser : `git branch -m ben/<tâche>`.
-- **Ports de dev** : Vite prend le port suivant s'il est occupé (5173, 5174, …) et l'affiche. Ne pas mettre `strictPort`. Un seul `pnpm dev` par humain suffit ; les autres sessions se contentent de `vite build` pour vérifier que ça compile.
-- **Messagerie locale** : entre les sessions de Benjamin, `SendMessage` fonctionne. Utile pour « j'ai poussé le socle, rebase » sans repasser par l'humain. Entre machines, ça n'existe pas : c'est git et la voix.
+  `pnpm install` dans un nouveau worktree prend quelques secondes grâce au store partagé de pnpm. `.arena-owner` est trouvé par repli dans le dépôt principal.
+- **Deux sessions d'une même personne** partagent une zone : les découper par sous-dossier (`src/features/capture/form/`, `src/features/capture/list/`) et le noter dans `ZONES` avec le même propriétaire. Le hook ne les distingue pas, c'est la découpe qui les protège.
+- **Les sous-agents restent dans le worktree de leur session**, sans `isolation: "worktree"`, pour des tâches internes à la zone. Si on tient à `isolation: "worktree"`, poser `"worktree": { "baseRef": "head" }` et fusionner la branche `worktree-<nom>` dans la branche de la session avant de pousser.
+- **Ports de dev** : Vite prend le port libre suivant (5173, 5174, …). Un seul `pnpm dev` par humain ; les autres sessions se contentent de `pnpm build` pour vérifier que ça compile.
+- **Messagerie locale** : entre les sessions d'une même personne, `SendMessage` fonctionne. Entre les deux machines, c'est l'état injecté par les hooks et la voix.
 
 ### 2.6 Les pièges et la réponse à chacun
 
 | Piège | Réponse |
 | --- | --- |
-| Latence GitHub | Chaque `gh` prend 1 à 2 s. Le hook d'état met en cache 45 s, donc ça ne pèse que sur un prompt sur trois environ. Aucune écriture ne dépend de GitHub : on pousse quand on veut, la PR draft est créée une fois. |
-| Deux Claude réservent la même tâche | Les tâches sont distribuées à T+3 par les humains, par zone : un Claude n'invente pas de tâche hors de sa zone. Si deux PR portent le même titre, la plus ancienne (numéro plus petit) gagne, l'autre se ferme. Le hook d'état montre les deux. |
-| `package.json` et `pnpm-lock.yaml` | Zone partagée : seul l'intégrateur ajoute des dépendances, et toutes celles qu'on peut prévoir sont posées au socle (T+5). En cas de conflit sur le lockfile malgré tout : `git checkout origin/main -- pnpm-lock.yaml package.json && pnpm add <ce qui manque> && git add -A && git rebase --continue`. |
-| Routes | `src/routes.tsx` est écrit une fois au socle avec des pages vides nommées d'avance (`CapturePage`, `BoardPage`). Chaque feature remplit son fichier `src/features/<zone>/index.tsx` qui exporte ce nom. Personne ne retouche les routes après T+10. |
-| Types | `src/shared/types.ts` écrit au socle. Un changement se demande à voix haute, Benjamin l'écrit, pousse sur `main`, annonce « types poussés, rebase ». |
-| `.env` non versionné | Voir 2.9 : on versionne un `.env` avec uniquement des valeurs publiques (`VITE_SUPABASE_URL`, clé anon). Rien de secret ne rentre jamais dans le dépôt ni à l'écran. `.env.local` reste ignoré et listé dans `.worktreeinclude`. |
-| Ports en double | Vite bascule tout seul sur le port libre suivant. |
-| Un Claude qui ne relit pas l'état | Il n'a pas le choix : l'état est injecté à chaque prompt par le hook UserPromptSubmit, et l'écriture hors zone est refusée par le hook PreToolUse. |
-| Un Claude qui pousse sur `main` | Le hook refuse d'écrire sur `main` sauf pour l'intégrateur. Par sécurité en plus, activer la protection de branche sur GitHub (Floriane, propriétaire, dans Settings > Branches : « Require a pull request before merging », sans review obligatoire, et autoriser les admins à contourner pour que Benjamin puisse pousser le socle). Si ça gêne à T+5, la désactiver prend 10 secondes. |
-| Une PR qui ne fusionne pas | Ça n'arrive que si la zone partagée a bougé. L'auteur fait `git fetch && git rebase origin/main`, résout, `git push --force-with-lease`. Deux minutes max, sinon on abandonne la PR et on repart de `main`. |
-| Le hook plante ou ralentit | `"disableAllHooks": true` dans `.claude/settings.local.json` de la machine concernée, et on retombe sur le CLAUDE.md seul. À décider à voix haute, pas en silence. |
-| Une machine tombe | Tout est sur GitHub toutes les 8 minutes au pire. L'autre machine ouvre un deuxième worktree sur la branche orpheline et continue. |
+| Deux fusions en même temps | Fichiers disjoints : GitHub fusionne les deux. L'Action annule le déploiement le plus ancien et publie le plus récent, qui contient les deux. |
+| Quelqu'un déploie un `main` en retard | Personne ne déploie à la main. `pnpm ship` ne sert qu'en secours, après `git pull`, annoncé à voix haute. |
+| Deux Claude prennent le verrou partagé au même moment | Deux PR `zone:shared` ouvertes : la plus ancienne (numéro plus petit) détient le verrou, le hook refuse l'autre en le nommant. La seconde attend la fusion de la première. |
+| Un verrou oublié | L'état affiche le détenteur à chaque prompt. Une PR `zone:shared` ouverte depuis plus de 5 minutes se signale à voix haute ; on la fusionne ou on la ferme. |
+| `package.json` et `pnpm-lock.yaml` | Zone partagée, donc sous verrou. Les dépendances prévisibles sont posées au socle. Conflit de lockfile malgré tout : `git checkout origin/main -- pnpm-lock.yaml package.json && pnpm install && git add -A && git rebase --continue`. |
+| La zone partagée a bougé sur `main` | L'état l'annonce (« zone partagée modifiée sur main depuis ta base »). Le Claude rebase avant d'écrire la suite. |
+| Latence GitHub | Chaque `gh` prend 1 à 2 s. L'état est en cache 15 s par worktree ; le verrou, lui, est vérifié à chaque écriture en zone partagée (rare). |
+| `.env` non versionné | `.env` versionné avec uniquement `VITE_SUPABASE_URL` et la clé anon (publique par conception). `.env.local` ignoré et listé dans `.worktreeinclude`. Dépôt public : rien d'autre, jamais. |
+| Un Claude qui ne relit pas l'état | Il n'a pas le choix : l'état est injecté à chaque prompt et les écritures interdites sont refusées. |
+| Un push direct sur `main` en Bash | Le hook ne voit que Edit/Write. La protection de branche GitHub refuse le push, et `settings.json` interdit `git push origin main`. |
+| `gh` indisponible | Le hook d'état affiche « gh indisponible ». Le hook de zones refuse l'écriture en zone partagée tant que le verrou ne peut pas être vérifié ; on décide à voix haute. |
+| Le hook plante | `"disableAllHooks": true` dans `.claude/settings.local.json` de la machine concernée, décidé à voix haute. |
+| Une machine tombe | Tout est sur GitHub toutes les 8 minutes au pire. L'autre machine ouvre un worktree sur la branche orpheline et continue. |
 
 ### 2.7 Les fichiers prêts à copier
 
-Tous ces fichiers vont à la racine du dépôt `productbuilderarena`, sauf mention contraire. Aucun n'est du code produit.
+Tous à la racine du dépôt, sauf mention contraire. Aucun n'est du code produit.
 
 #### `CLAUDE.md`
 
@@ -246,44 +250,46 @@ Deux humains (Benjamin = `ben`, Floriane = `flo`), deux machines, plusieurs sess
 60 minutes chrono. Ce dépôt est le seul lien entre les machines. Lis ce fichier en entier.
 
 ## Qui je suis
-- Mon identité est dans `.arena-owner` (ben ou flo). Les hooks la lisent aussi.
-- Ma zone est dans `ZONES`. Je n'écris que dans ma zone (le hook refuse le reste).
-- L'intégrateur (première ligne de `ZONES`) est le seul à écrire en zone `shared` et sur `main`.
+- Mon identité est dans `.arena-owner` (ben ou flo). Ma zone est dans `ZONES`.
+- Je n'écris que dans ma zone, jamais sur `main`. Les hooks refusent le reste.
 
-## Ce que je fais au démarrage et à chaque prompt
-- Le hook m'imprime l'état partagé : `origin/main`, PR ouvertes, ma branche, `PLAN.md`, `ZONES`.
+## Au démarrage et à chaque prompt
+- Le hook m'imprime l'état partagé : `origin/main`, PR ouvertes, verrou partagé, ma branche.
   Je le lis avant d'agir. Une PR `[en cours]` = quelqu'un travaille dessus, je n'y touche pas.
 - Si je ne suis pas sur une branche `<moi>/<tâche>` : `git fetch origin && git switch -c <moi>/<tâche> origin/main`.
-- Si je suis en retard sur `origin/main` : `git fetch && git rebase origin/main` avant d'écrire.
+- Si l'état dit que la zone partagée a bougé sur main : `git fetch && git rebase origin/main` avant d'écrire.
 
 ## Réserver une tâche = ouvrir une PR draft
 git commit --allow-empty -m "start: <tâche>" && git push -u origin HEAD
-gh pr create --draft --title "<tâche>" --body "zone: <moi>" --label "zone:<moi>"
+gh pr create --draft --title "<tâche>" --body "zone: <moi>"
 Une seule PR par tâche. Si une PR du même nom existe déjà, je m'arrête et je le dis.
+
+## Zone partagée (types, routes, package.json, lockfile, schéma Supabase) : verrou
+- Je ne la touche que si mon humain l'a demandé ou validé.
+- Je prends le verrou sur une branche dédiée `<moi>/shared-<quoi>` :
+  git commit --allow-empty -m "start: shared <quoi>" && git push -u origin HEAD
+  gh pr create --draft --title "shared: <quoi>" --label "zone:shared" --body "verrou"
+- Si le hook dit que le verrou est pris, j'attends et je le dis à mon humain.
+- Changement minimal, puis tout de suite : push, `gh pr ready`, `gh pr merge --squash`. Le verrou se libère à la fusion.
+- Mon humain annonce à voix haute : « partagé fusionné, rebasez ».
 
 ## Pendant le travail
 - Commit + push toutes les 5 à 8 minutes, message préfixé par la zone : `board: liste des cartes`.
-- Je n'ajoute pas de dépendance, je ne touche ni aux types, ni aux routes, ni à `package.json` :
-  je formule le changement en une phrase et je le remonte à mon humain, qui le dit à l'intégrateur.
 - Mobile d'abord (390 px), zéro auth, zéro formulaire long. Le public teste sur téléphone.
-- Pas de secret dans le code, ni dans les prompts, ni dans les logs : les écrans sont projetés.
-- `pnpm` uniquement, jamais `npm`.
+- Pas de secret dans le code, les prompts ou les logs : dépôt public, écrans projetés.
+- `pnpm` uniquement, jamais `npm`. Je ne déploie pas : l'Action GitHub le fait à chaque fusion.
 
-## Finir une tâche
-git fetch && git rebase origin/main && git push --force-with-lease && gh pr ready
-Mon compte rendu se termine par : `PR #<n> prête · fichiers : <liste>` ou `PR #<n> en cours · bloqué par : <quoi>`.
-Je ne fusionne pas moi-même : l'intégrateur fusionne et déploie (`pnpm ship`).
-
-## Intégrateur seulement
-- Fusion : `gh pr merge <n> --merge --delete-branch`, puis `git pull` sur `main`, puis `pnpm ship`.
-- Modification de zone partagée : sur `main` directement, commit `shared: <quoi>`, push, et l'annoncer.
+## Finir une tâche : je fusionne moi-même
+git fetch && git rebase origin/main && git push --force-with-lease
+gh pr ready && gh pr merge --squash
+Mon compte rendu se termine par : `PR #<n> fusionnée · fichiers : <liste>` ou `PR #<n> en cours · bloqué par : <quoi>`.
+Tâche suivante : `git fetch && git switch -c <moi>/<suivante> origin/main`.
 ```
 
 #### `ZONES` (écrit à T+3, première correspondance gagne, préfixes de chemin)
 
 ```text
-# owner    prefixe (dossier terminé par / ou fichier exact). Première ligne qui correspond gagne.
-integrator ben
+# owner  prefixe (dossier terminé par / ou fichier exact). Première ligne qui correspond gagne.
 shared  src/shared/
 shared  src/routes.tsx
 shared  src/App.tsx
@@ -293,6 +299,8 @@ shared  index.html
 shared  package.json
 shared  pnpm-lock.yaml
 shared  vite.config.ts
+shared  supabase/
+shared  .env
 ben     src/features/capture/
 flo     src/features/board/
 any     public/
@@ -300,30 +308,30 @@ any     docs/
 any     PLAN.md
 ```
 
-Les noms `capture` et `board` sont des exemples : à remplacer à T+3 par les deux features du brief. Un chemin qui ne correspond à aucune ligne est autorisé (le hook laisse passer) : ajouter une ligne dès qu'un nouveau dossier apparaît.
+`capture` et `board` sont des exemples, remplacés à T+3 par les features du brief. Un chemin qui ne correspond à aucune ligne est autorisé : ajouter une ligne dès qu'un nouveau dossier apparaît. `ZONES` lui-même n'y figure pas exprès : on le modifie ensemble à voix haute, sur une PR fusionnée tout de suite.
 
-#### `PLAN.md` (écrit à T+0 à T+5, modifié ensuite seulement par l'intégrateur)
+#### `PLAN.md` (écrit de T+0 à T+5)
 
 ```markdown
 # Plan · <nom du produit>
 
 Brief (mot pour mot) : …
 Produit en une phrase : <qui> peut <quoi> en <temps>.
-Parcours (3 écrans max) : 1. … 2. … 3. …
+Parcours : 1. … 2. … 3. …
 Wow (un seul, après T+38 seulement) : …
 Données : localStorage | Supabase (table `…`)
-Intégrateur : ben · déploiement : `pnpm ship` · URL : https://arena.pages.dev
+Déploiement : automatique à chaque fusion sur main · URL : https://arena.pages.dev
 
-## Tâches
-| Zone | Qui | Tâche | État |
-| --- | --- | --- | --- |
-| shared | ben | socle : scaffold, types, routes, ship hello | |
-| capture | ben | … | |
-| board | flo | … | |
-| any | flo | textes des écrans, données d'exemple, pitch | |
+## Découpage initial
+| Zone | Qui | Tâche |
+| --- | --- | --- |
+| shared | ben | socle : scaffold, types, routes, hello en ligne |
+| capture | ben | … |
+| board | flo | … |
+| any | flo | textes des écrans, données d'exemple, pitch |
 ```
 
-L'état vivant n'est pas dans ce tableau mais dans `gh pr list`. Le tableau sert à ce que chaque Claude connaisse le découpage initial.
+L'état vivant n'est pas dans ce tableau mais dans `gh pr list`, que les hooks affichent.
 
 #### `.arena-owner` (un par machine, ignoré par git)
 
@@ -351,9 +359,57 @@ dist
 .arena-owner
 ```
 
+#### `.github/workflows/deploy.yml`
+
+Déploie `main` sur Cloudflare Pages à chaque push, sauf quand seuls des fichiers de coordination changent. Demande deux secrets du dépôt, `CLOUDFLARE_API_TOKEN` (droit « Cloudflare Pages : Edit ») et `CLOUDFLARE_ACCOUNT_ID`, que seule Floriane, propriétaire, peut ajouter. Le projet Pages `arena` doit exister avant le premier déploiement.
+
+```yaml
+name: deploy
+on:
+  push:
+    branches: [main]
+    paths-ignore:
+      - "docs/**"
+      - "**.md"
+      - "ZONES"
+      - ".gitignore"
+      - ".worktreeinclude"
+      - ".claude/**"
+      - ".github/**"
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-production
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: pnpm/action-setup@v4
+        with:
+          version: 10
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+      - run: pnpm install --frozen-lockfile
+      - run: pnpm build
+        env:
+          VITE_SHA: ${{ github.sha }}
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy dist --project-name=arena --branch=main --commit-hash=${{ github.sha }}
+```
+
+Le pied de page de l'app affiche `import.meta.env.VITE_SHA` tronqué à 7 caractères : on sait ce qui est en ligne en regardant son téléphone.
+
 #### `.claude/settings.json`
 
-Syntaxe vérifiée contre la doc hooks (code.claude.com/docs/en/hooks) le 30/09/2026 : structure `hooks > Événement > [{ matcher?, hooks: [{ type, command, timeout, statusMessage? }] }]`, matcher `Edit|Write|NotebookEdit` pour PreToolUse, pas de matcher pour SessionStart (donc toutes les sources : startup, resume, clear, compact) ni pour UserPromptSubmit. Le stdout texte de SessionStart et UserPromptSubmit est ajouté au contexte ; PreToolUse décide via JSON `hookSpecificOutput.permissionDecision`. JSON validé avec `jq`.
+Structure des hooks vérifiée contre la doc (code.claude.com/docs/en/hooks). Les permissions laissent passer git et gh sans question, mais interdisent le push direct sur `main`, le push forcé sans `--force-with-lease` et le reset dur.
 
 ```json
 {
@@ -365,7 +421,7 @@ Syntaxe vérifiée contre la doc hooks (code.claude.com/docs/en/hooks) le 30/09/
             "type": "command",
             "command": "bash \"${CLAUDE_PROJECT_DIR}/.claude/hooks/arena-state.sh\"",
             "timeout": 20,
-            "statusMessage": "Lecture de l'état Arena (main, PR, zones)"
+            "statusMessage": "Lecture de l'état Arena (main, PR, verrou)"
           }
         ]
       }
@@ -396,23 +452,35 @@ Syntaxe vérifiée contre la doc hooks (code.claude.com/docs/en/hooks) le 30/09/
   },
   "permissions": {
     "allow": [
-      "Bash(git *)",
+      "Bash(git status*)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git fetch*)",
+      "Bash(git switch*)",
+      "Bash(git add*)",
+      "Bash(git commit*)",
+      "Bash(git rebase*)",
+      "Bash(git push*)",
       "Bash(gh pr *)",
-      "Bash(pnpm *)",
-      "Bash(wrangler *)"
+      "Bash(pnpm *)"
+    ],
+    "deny": [
+      "Bash(git push origin main*)",
+      "Bash(git push --force *)",
+      "Bash(git push -f *)",
+      "Bash(git reset --hard*)",
+      "Bash(gh pr merge * --admin*)"
     ]
   }
 }
 ```
 
-`${CLAUDE_PROJECT_DIR}` pointe toujours vers le dépôt principal, y compris dans un worktree [lu], et les scripts y sont versionnés : c'est voulu. Les scripts lisent `cwd` dans le JSON pour savoir dans quel worktree ils sont.
-
-#### `.claude/hooks/arena-state.sh` (testé le 30/09 sur un dépôt local)
+#### `.claude/hooks/arena-state.sh`
 
 ```bash
 #!/bin/bash
-# SessionStart + UserPromptSubmit : imprime l'état partagé (main, PR ouvertes, ma branche).
-# Sortie texte = ajoutée au contexte de Claude. Cache 45 s pour ne pas ralentir chaque prompt.
+# SessionStart + UserPromptSubmit : imprime l'état partagé (main, PR ouvertes, verrou partagé, ma branche).
+# Sortie texte = ajoutée au contexte de Claude. Cache 15 s par worktree pour ne pas ralentir chaque prompt.
 INPUT=$(cat)
 CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // empty')
 [ -z "$CWD" ] && CWD=$(pwd)
@@ -425,10 +493,11 @@ owner_file() {
   f="$(git -C "$CWD" rev-parse --git-common-dir 2>/dev/null)/../.arena-owner"; [ -f "$f" ] && echo "$f"
 }
 
-CACHE="${TMPDIR:-/tmp}/arena-state-$(id -u).txt"
+KEY=$(printf '%s' "$ROOT" | cksum | cut -d' ' -f1)
+CACHE="${TMPDIR:-/tmp}/arena-state-$(id -u)-$KEY.txt"
 if [ "$EVENT" = "UserPromptSubmit" ] && [ -f "$CACHE" ]; then
   AGE=$(( $(date +%s) - $(stat -f %m "$CACHE" 2>/dev/null || stat -c %Y "$CACHE") ))
-  if [ "$AGE" -lt 45 ]; then cat "$CACHE"; exit 0; fi
+  if [ "$AGE" -lt 15 ]; then cat "$CACHE"; exit 0; fi
 fi
 
 git -C "$CWD" fetch -q origin 2>/dev/null
@@ -437,30 +506,46 @@ BRANCH=$(git -C "$CWD" branch --show-current 2>/dev/null)
 BEHIND=$(git -C "$CWD" rev-list --count "HEAD..origin/main" 2>/dev/null || echo "?")
 DIRTY=$(git -C "$CWD" status --porcelain 2>/dev/null | wc -l | tr -d ' ')
 REPO=$(git -C "$CWD" remote get-url origin 2>/dev/null | sed -E 's#.*github.com[:/]##; s#\.git$##')
+PRS=$(gh pr list --repo "$REPO" --state open --json number,title,author,isDraft,headRefName,labels 2>/dev/null)
+
+# La zone partagée a-t-elle bougé sur main depuis ma base ?
+SHARED_MOVED=""
+if [ -f "$ROOT/ZONES" ] && [ "$BEHIND" != "0" ] && [ "$BEHIND" != "?" ]; then
+  CHANGED=$(git -C "$CWD" diff --name-only "HEAD...origin/main" 2>/dev/null)
+  while read -r owner prefix _; do
+    [ "$owner" = "shared" ] || continue
+    printf '%s\n' "$CHANGED" | grep -q "^$prefix" && { SHARED_MOVED=1; break; }
+  done < "$ROOT/ZONES"
+fi
 
 {
-  echo "## ARENA : état partagé ($(date +%H:%M))"
+  echo "## ARENA : état partagé ($(date +%H:%M:%S))"
   echo "Moi : ${ME:-inconnu} · branche : ${BRANCH:-?} · en retard sur origin/main : $BEHIND commit(s) · fichiers non commités : $DIRTY"
+  [ -n "$SHARED_MOVED" ] && echo "ATTENTION : la zone partagée a changé sur main depuis ta base. Fais 'git fetch && git rebase origin/main' avant d'écrire."
   echo "### Derniers commits sur origin/main"
   git -C "$CWD" log --format='- %h %s (%an, %cr)' -6 origin/main 2>/dev/null || echo "- (pas encore de main distant)"
-  echo "### PR ouvertes = tâches en cours (gh pr list)"
-  gh pr list --repo "$REPO" --state open --json number,title,author,isDraft,headRefName \
-     --template '{{range .}}- #{{.number}} {{if .isDraft}}[en cours]{{else}}[prêt à fusionner]{{end}} {{.title}} · {{.author.login}} · {{.headRefName}}{{"\n"}}{{end}}' 2>/dev/null \
-     || echo "- (gh indisponible ou dépôt sans PR)"
+  echo "### PR ouvertes = tâches en cours"
+  if [ -z "$PRS" ]; then
+    echo "- (gh indisponible)"
+  else
+    printf '%s' "$PRS" | jq -r 'if length == 0 then "- (aucune)" else sort_by(.number)[] | "- #\(.number) \(if .isDraft then "[en cours]" else "[prête]" end) \(.title) · \(.headRefName) · \(.author.login)\(if any(.labels[]; .name == "zone:shared") then " · zone partagée" else "" end)" end'
+    echo "### Verrou partagé : $(printf '%s' "$PRS" | jq -r '[.[] | select(any(.labels[]; .name == "zone:shared"))] | sort_by(.number) | if length == 0 then "libre" else "pris par #\(.[0].number) (\(.[0].headRefName))" end')"
+  fi
   [ -f "$ROOT/PLAN.md" ] && { echo "### PLAN.md"; cat "$ROOT/PLAN.md"; }
   [ -f "$ROOT/ZONES" ] && { echo "### ZONES"; grep -v '^#' "$ROOT/ZONES"; }
 } | tee "$CACHE"
 ```
 
-#### `.claude/hooks/arena-zones.sh` (testé le 30/09 : refuse hors zone, refuse la zone partagée aux non-intégrateurs, refuse `main` aux non-intégrateurs, laisse passer le reste)
+#### `.claude/hooks/arena-zones.sh`
 
 ```bash
 #!/bin/bash
-# PreToolUse (Edit|Write|NotebookEdit) : refuse d'écrire hors de sa zone.
+# PreToolUse (Edit|Write|NotebookEdit) : refuse d'écrire sur main, dans la zone de l'autre,
+# ou en zone partagée sans détenir le verrou (= la plus ancienne PR ouverte labellisée zone:shared).
 INPUT=$(cat)
-FILE=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // empty')
+FILE=$(printf '%s' "$INPUT" | jq -r '.tool_input.file_path // .tool_input.notebook_path // empty')
 CWD=$(printf '%s' "$INPUT" | jq -r '.cwd // empty')
-[ -z "$FILE" ] || [ -z "$CWD" ] && exit 0
+{ [ -z "$FILE" ] || [ -z "$CWD" ]; } && exit 0
 
 ROOT=$(git -C "$CWD" rev-parse --show-toplevel 2>/dev/null) || exit 0
 ZONES="$ROOT/ZONES"
@@ -474,7 +559,6 @@ owner_file() {
 ME=$(head -n1 "$(owner_file)" 2>/dev/null | tr -d '[:space:]')
 BRANCH=$(git -C "$CWD" branch --show-current 2>/dev/null)
 [ -z "$ME" ] && ME=$(printf '%s' "$BRANCH" | cut -d/ -f1)
-INTEGRATOR=$(awk '$1=="integrator"{print $2; exit}' "$ZONES")
 
 deny() {
   jq -nc --arg r "$1" '{hookSpecificOutput:{hookEventName:"PreToolUse",permissionDecision:"deny",permissionDecisionReason:$r}}'
@@ -486,93 +570,103 @@ case "$FILE" in
   *) exit 0 ;;   # hors dépôt : pas notre affaire
 esac
 
-if [ "$BRANCH" = "main" ] && [ "$ME" != "$INTEGRATOR" ]; then
-  deny "Tu es sur main. Crée une branche $ME/<tache> avant d'écrire ($REL)."
+if [ "$BRANCH" = "main" ]; then
+  deny "Personne n'écrit sur main. Crée d'abord une branche : git fetch origin && git switch -c $ME/<tâche> origin/main ($REL)."
 fi
 
 OWNER=""
 while read -r owner prefix _; do
-  case "$owner" in ""|"#"*|integrator) continue ;; esac
+  case "$owner" in ""|"#"*) continue ;; esac
   case "$REL" in "$prefix"*) OWNER="$owner"; break ;; esac
 done < "$ZONES"
 
 [ -z "$OWNER" ] && exit 0
 [ "$OWNER" = "any" ] && exit 0
-[ "$OWNER" = "$ME" ] && exit 0
+
 if [ "$OWNER" = "shared" ]; then
-  [ "$ME" = "$INTEGRATOR" ] && exit 0
-  deny "$REL est en zone partagée (types, routes, deps). Seul l'intégrateur ($INTEGRATOR) y écrit : remonte le changement voulu à ton humain au lieu d'éditer."
+  REPO=$(git -C "$CWD" remote get-url origin 2>/dev/null | sed -E 's#.*github.com[:/]##; s#\.git$##')
+  LOCKS=$(gh pr list --repo "$REPO" --state open --label zone:shared --json number,headRefName 2>/dev/null) \
+    || deny "$REL est en zone partagée et gh ne répond pas : impossible de vérifier le verrou. Réessaie, ou décidez à voix haute."
+  HOLDER=$(printf '%s' "$LOCKS" | jq -r 'sort_by(.number) | .[0].headRefName // empty')
+  NUM=$(printf '%s' "$LOCKS" | jq -r 'sort_by(.number) | .[0].number // empty')
+  [ -z "$HOLDER" ] && deny "$REL est en zone partagée (types, routes, deps, schéma). Prends d'abord le verrou sur une branche dédiée : git commit --allow-empty -m 'start: shared <quoi>' && git push -u origin HEAD && gh pr create --draft --title 'shared: <quoi>' --label zone:shared --body verrou. Puis réessaie."
+  [ "$HOLDER" = "$BRANCH" ] && exit 0
+  deny "$REL est en zone partagée et le verrou est pris par #$NUM ($HOLDER). Attends sa fusion (visible dans l'état Arena) ou vois ça à voix haute."
 fi
-deny "$REL appartient à la zone de $OWNER, pas à $ME. Reste dans ta zone ou demande à $OWNER."
+
+[ -z "$ME" ] && deny "Identité inconnue : crée .arena-owner (ben ou flo) à la racine du dépôt."
+[ "$OWNER" = "$ME" ] && exit 0
+deny "$REL appartient à la zone de $OWNER, pas à $ME. Reste dans ta zone, ou demande à $OWNER."
 ```
 
-Après copie : `chmod +x .claude/hooks/*.sh`. Les deux scripts n'ont besoin que de `bash`, `git`, `jq` (présent sur la machine de Benjamin : `/usr/bin/jq`) et `gh`. À vérifier chez Floriane.
+Après copie : `chmod +x .claude/hooks/*.sh`. Les deux scripts n'ont besoin que de `bash`, `git`, `jq` et `gh`, à vérifier chez Floriane.
 
-Limites connues des hooks, à connaître :
-- Le refus ne s'applique qu'aux outils Edit, Write et NotebookEdit. Un `sed -i` en Bash passe. Le CLAUDE.md compense ; en pratique Claude n'écrit pas de code via sed.
-- Le cache d'état de 45 s est partagé par toutes les sessions de la machine (un seul fichier par utilisateur) : la ligne « Moi / branche » peut afficher celle d'une autre session pendant 45 s. Si ça gêne, remplacer `arena-state-$(id -u)` par `arena-state-$(id -u)-$(printf '%s' "$CWD" | md5 | cut -c1-8)` (sur macOS ; `md5sum` sur Linux).
-- Rien n'empêche deux personnes de mettre des noms de zones différents dans `ZONES` sur deux branches : c'est pour ça que `ZONES` est écrit une fois par l'intégrateur sur `main` et jamais modifié ailleurs.
+Limites connues :
+- Le refus ne s'applique qu'à Edit, Write et NotebookEdit. Un `sed -i` en Bash passe. Le CLAUDE.md compense.
+- Deux sessions d'une même personne ne sont pas séparées par le hook dans leur zone : c'est la découpe en sous-dossiers qui les protège (voir 2.5).
+- `ZONES` se modifie ensemble, à voix haute, par une PR fusionnée tout de suite, jamais en douce sur une branche.
 
-#### Labels GitHub (créés par Floriane avant le jour J, ou à T+2 : 10 secondes)
+#### Labels et réglages GitHub (Floriane, avant le jour J)
 
 ```bash
-gh label create "zone:ben" --color 1D76DB --repo Floriane-ju/productbuilderarena
-gh label create "zone:flo" --color D93F0B --repo Floriane-ju/productbuilderarena
 gh label create "zone:shared" --color 5319E7 --repo Floriane-ju/productbuilderarena
 ```
 
-Ils ne sont pas indispensables (le titre et l'auteur suffisent au hook), mais rendent `gh pr list` et la page GitHub lisibles sur l'écran projeté.
+Dans Settings du dépôt :
+- General → Pull Requests : cocher « Allow squash merging » et « Automatically delete head branches ».
+- Branches → règle sur `main` : « Require a pull request before merging », sans review obligatoire, sans « Require branches to be up to date » (sinon chaque fusion forcerait un rebase).
+- Secrets and variables → Actions : `CLOUDFLARE_API_TOKEN` et `CLOUDFLARE_ACCOUNT_ID`.
 
 ### 2.8 Gabarits de prompts (à garder en texte, pas en code)
 
 **Socle (Benjamin, T+5)**
-> Crée une app Vite React TypeScript avec pnpm dans ce dossier (déjà un dépôt git, ne touche pas à `.claude/`, `CLAUDE.md`, `ZONES`, `PLAN.md`). Tailwind v4 via `@import "tailwindcss"`. react-router avec `src/routes.tsx` qui déclare deux pages vides : `CapturePage` importée de `src/features/capture/index.tsx` et `BoardPage` de `src/features/board/index.tsx`, chacune affichant son nom. `src/shared/types.ts` contient : <coller le modèle>. Scripts `dev`, `build` (vite build seul) et `ship` (voir PLAN.md). `index.html` : titre « <produit> », viewport mobile, `theme-color`. Puis `pnpm ship` et donne-moi l'URL. Commit `socle` sur main et push. Pas de tests, pas de README.
+> Lis CLAUDE.md. Sur la branche `ben/socle`, prends le verrou partagé comme décrit (PR draft `zone:shared`). Crée une app Vite React TypeScript avec pnpm dans ce dossier (déjà un dépôt git, ne touche pas à `.claude/`, `.github/`, `CLAUDE.md`, `ZONES`, `PLAN.md`). Tailwind v4 via `@import "tailwindcss"`. react-router avec `src/routes.tsx` qui déclare deux pages vides : `CapturePage` importée de `src/features/capture/index.tsx` et `BoardPage` de `src/features/board/index.tsx`, chacune affichant son nom. `src/shared/types.ts` contient : <coller le modèle>. Scripts `dev`, `build` (vite build seul) et `ship` (secours). `index.html` : titre « <produit> », viewport mobile, `theme-color`. Un pied de page qui affiche les 7 premiers caractères de `import.meta.env.VITE_SHA`. Puis push, `gh pr ready`, `gh pr merge --squash`, et suis le déploiement avec `gh run watch`. Donne-moi l'URL. Pas de tests, pas de README.
 
 **Feature (chacun, T+12)**
-> Lis PLAN.md et ZONES. Tu es `<moi>`, ta zone est `src/features/<zone>/`. Le brief : <coller>. Ta page `<Nom>Page` doit permettre à <qui> de <quoi> en 3 interactions max, sur téléphone (390 px de large), sans login. Données : <localStorage via src/shared/storage.ts | table Supabase `x` via src/shared/supabase.ts>, en respectant les types de `src/shared/types.ts` sans les modifier. Commence par créer ta branche et ta PR draft comme décrit dans CLAUDE.md, commit et push toutes les 5 minutes. Quand le parcours marche dans `pnpm dev`, passe la PR en prête et dis-moi les fichiers touchés.
+> Lis PLAN.md et ZONES. Tu es `<moi>`, ta zone est `src/features/<zone>/`. Le brief : <coller>. Ta page `<Nom>Page` doit permettre à <qui> de <quoi> sur téléphone (390 px de large), sans login. Données : <localStorage via src/shared/storage.ts | table Supabase `x` via src/shared/supabase.ts>, en respectant les types de `src/shared/types.ts`. Si tu as besoin de changer la zone partagée, dis-le-moi avant. Commence par ta branche et ta PR draft comme décrit dans CLAUDE.md, commit et push toutes les 5 minutes. Quand le parcours marche dans `pnpm dev`, fusionne ta PR toi-même et dis-moi les fichiers touchés.
 
 **Polish mobile (T+48)**
-> Sur ta zone uniquement : zones tactiles d'au moins 44 px, texte 16 px minimum, états vides avec une phrase, erreurs affichées, pas de scroll horizontal à 390 px, retour visuel sur chaque action. Ne change aucune fonctionnalité. Commit, push, PR prête.
+> Sur ta zone uniquement : zones tactiles d'au moins 44 px, texte 16 px minimum, états vides avec une phrase, erreurs affichées, pas de scroll horizontal à 390 px, retour visuel sur chaque action. Ne change aucune fonctionnalité. Commit, push, fusionne.
 
 ### 2.9 Déploiement, secrets et propagation
 
-- **Projet Cloudflare Pages** : `wrangler pages project create arena --production-branch main` (une fois). Le `pnpm ship` du socle donne `https://arena.pages.dev` (ou `https://arena-xxx.pages.dev` si le nom est pris : le choisir la veille, ou à T+6).
-- **Qui déploie** : seulement l'intégrateur, depuis son `main` fraîchement `git pull`. Une session dédiée « intégration » sur la machine de Benjamin, qui ne fait que `gh pr merge`, `git pull`, `pnpm ship`.
-- **Propagation** : d'après l'expérience de Benjamin sur ses autres apps, tester immédiatement après un déploiement peut encore servir l'ancienne version. Parade : afficher le SHA court du commit dans le pied de page (`import.meta.env.VITE_SHA`, injecté par `VITE_SHA=$(git rev-parse --short HEAD) pnpm ship`) et vérifier ce SHA sur le téléphone avant de dire « c'est en ligne ». Jamais de rollback Cloudflare : ça fige le cache.
-- **Secrets** : `.env` versionné contenant uniquement `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` (la clé anon est publique par conception, elle finit de toute façon dans le bundle). Rien d'autre. `.env.local` ignoré, pour tout ce qui serait personnel. Les écrans sont projetés : ne jamais afficher un `cat .env`, un `wrangler whoami` détaillé, ni le dashboard Supabase avec la clé service_role.
-- **Secours** : si `wrangler` échoue deux fois, `pnpm dlx serve dist -l 4173` et `cloudflared tunnel --url http://localhost:4173` donnent une URL publique en 10 secondes depuis la machine de Benjamin (installer `cloudflared` avant le jour J).
+- **Projet Cloudflare Pages** : `wrangler pages project create arena --production-branch main`, une fois, depuis la machine de Benjamin (compte Cloudflare de Benjamin). L'URL sera `https://arena.pages.dev`, ou `https://arena-xxx.pages.dev` si le nom est pris : le fixer la veille.
+- **Qui déploie** : l'Action GitHub, à chaque fusion sur `main`. Compter une à deux minutes. `gh run watch` montre le déploiement en cours.
+- **Propagation** : tester juste après un déploiement peut encore servir l'ancienne version. Parade : le SHA du pied de page doit être celui du dernier commit de `main` avant de dire « c'est en ligne ». Jamais de rollback Cloudflare : ça fige le cache.
+- **Secrets** : `.env` versionné contenant uniquement `VITE_SUPABASE_URL` et `VITE_SUPABASE_ANON_KEY` (la clé anon est publique par conception, elle finit dans le bundle). Le jeton Cloudflare ne vit que dans les secrets GitHub. Dépôt public et écrans projetés : ne jamais afficher un `cat .env.local`, ni le dashboard Supabase avec la clé service_role.
+- **Secours** : si l'Action échoue deux fois, une seule personne lance `git pull && pnpm ship` et l'annonce à voix haute. Si wrangler tombe aussi : `pnpm dlx serve dist -l 4173` et `cloudflared tunnel --url http://localhost:4173` donnent une URL publique en 10 secondes.
 
 ### 2.10 Checklist avant le jour J
 
 **Les deux, dès maintenant**
 - [ ] Envoyer les 7 questions de 1.6 aux organisateurs, par écrit.
-- [ ] Benjamin accepte l'invitation GitHub (`gh api -X PATCH /user/repository_invitations/<id>` ou depuis le site).
-- [ ] Floriane pousse le premier commit : `CLAUDE.md`, `ZONES` (vide sauf la ligne `integrator ben`), `PLAN.md` (gabarit), `.gitignore`, `.worktreeinclude`, `.claude/settings.json`, `.claude/hooks/*.sh` exécutables. Aucun code produit. Si les organisateurs le refusent, garder ces fichiers dans un gist privé.
-- [ ] Floriane crée les trois labels `zone:*` et, si vous le voulez, la protection de branche `main` (PR obligatoire, pas de review, admins exemptés).
-- [ ] Chacun clone, lance `claude` une fois dans le dossier et accepte la confiance du dossier (sinon les hooks du dépôt ne tournent pas). Vérifier que l'état Arena s'affiche au démarrage.
+- [ ] Décider si le dépôt reste public (l'équipe adverse peut lire ce plan) ou passe en privé.
+- [ ] Pousser le commit d'outillage : `CLAUDE.md`, `ZONES` (vide), `PLAN.md` (gabarit), `.gitignore`, `.worktreeinclude`, `.claude/settings.json`, `.claude/hooks/*.sh` exécutables, `.github/workflows/deploy.yml`. Aucun code produit. Si les organisateurs le refusent, garder ces fichiers dans un gist privé et les pousser à T+0.
+- [ ] Floriane : le label `zone:shared`, les réglages et les deux secrets de 2.7.
+- [ ] Chacun clone, lance `claude` une fois dans le dossier et accepte la confiance du dossier (sinon les hooks ne tournent pas). Vérifier que l'état Arena s'affiche.
 - [ ] Chacun crée son `.arena-owner`.
-- [ ] Machines : Node 22+, `pnpm` (Benjamin : 10.34.5, présent), `gh` connecté (Benjamin : compte Benjaminnespou, présent), `jq` (Benjamin : présent), `wrangler` (Benjamin : **absent**, `pnpm add -g wrangler && wrangler login`), `cloudflared` (secours), Claude Code à jour (sur la machine de Benjamin, `claude` n'est pas dans le PATH du shell des agents : vérifier `claude --version` dans son terminal habituel).
-- [ ] Benjamin : `wrangler pages project create arena` et un `pnpm ship` d'un `dist/` bidon pour vérifier le compte, puis supprimer le déploiement de test. Vérifier le nom `arena.pages.dev` disponible, sinon choisir le nom la veille.
+- [ ] Machines : Node 22+, `pnpm`, `gh` connecté, `jq`, `wrangler` (Benjamin : **absent**, `pnpm add -g wrangler && wrangler login`), `cloudflared` (secours), Claude Code à jour.
+- [ ] Benjamin : créer le projet Pages `arena` et le jeton API « Cloudflare Pages : Edit », à transmettre à Floriane pour les secrets.
 - [ ] Supabase : un projet vide « arena » créé, URL et clé anon notées, à ne remplir qu'à T+6 si le brief l'exige.
 
 **Répétition générale (deux fois, une semaine et deux jours avant, 75 minutes chacune)**
-- [ ] Brief inventé par un tiers, chrono réel, deux machines, protocole complet, ship à T+10 et à T+53, démo de 3 minutes. Objectif de la première : que les hooks et les fusions passent sans conflit. Objectif de la seconde : un produit qui tient sur téléphone.
-- [ ] Après chaque répétition : noter les 3 frictions, corriger le CLAUDE.md, supprimer tout le code (`git rm -r src public index.html package.json pnpm-lock.yaml …`, commit « reset ») pour arriver le 14 avec un dépôt sans code produit.
-- [ ] Mesurer : durée réelle du scaffold, du premier ship, d'une fusion, du `pnpm install` dans un worktree.
+- [ ] Brief inventé par un tiers, chrono réel, deux machines, protocole complet, au moins une prise de verrou partagé chacun, et deux fusions à moins d'une minute d'écart pour voir l'Action les enchaîner.
+- [ ] Après chaque répétition : noter les 3 frictions, corriger le CLAUDE.md, supprimer tout le code produit (commit « reset ») pour arriver le 14 avec un dépôt sans code produit.
+- [ ] Mesurer : durée du scaffold, d'un déploiement par l'Action, d'une fusion, du `pnpm install` dans un worktree.
 
 **La veille**
-- [ ] `git pull`, `pnpm store prune`, mise à jour de Claude Code et de wrangler, un dernier `claude` pour vérifier les hooks.
+- [ ] `git pull`, mise à jour de Claude Code et de wrangler, un dernier `claude` pour vérifier les hooks.
 - [ ] Charger les téléphones, prévoir un câble de projection, un partage de connexion 4G, la police du terminal en gros.
 - [ ] Relire 1.3 ensemble, et se répartir le pitch.
 
 **Le jour J, avant 19h00**
-- [ ] `gh auth status`, `wrangler whoami`, `git fetch`, `.arena-owner` en place, terminal projetable.
-- [ ] Un onglet ouvert sur `github.com/Floriane-ju/productbuilderarena/pulls` sur chaque machine.
+- [ ] `gh auth status`, `git fetch`, `.arena-owner` en place, terminal projetable.
+- [ ] Un onglet ouvert sur `github.com/Floriane-ju/productbuilderarena/pulls` et un sur les Actions, sur chaque machine.
 
 ---
 
 ## Ce qui manque encore
 
-- Le replay et le gagnant de l'édition de mai (la chaîne YouTube ne publie rien d'accessible) : si Benjamin retrouve le lien, le regarder change probablement plusieurs choix de 1.2 (ce qui a fait voter la salle, la longueur des démos, le niveau des produits).
+- Le replay et le gagnant de l'édition de mai : si on retrouve le lien, le regarder change probablement plusieurs choix de 1.2.
 - La réponse des organisateurs sur la zone grise de 1.4 conditionne la checklist : dépôt outillé avant, ou tout à T+0.
 - La composition de l'équipe (« get matched ») n'est pas confirmée sur le site.
