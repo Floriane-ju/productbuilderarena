@@ -1,10 +1,13 @@
 import * as THREE from 'three'
+import { RoundedBoxGeometry } from 'three/examples/jsm/geometries/RoundedBoxGeometry.js'
 
 // Couleurs charte Regenerativ
 const C = {
   solar: new THREE.Color('#E8B60E'),
   solarLight: new THREE.Color('#F6D766'),
   battery: new THREE.Color('#5DB8D5'),
+  economy: new THREE.Color('#5ABB99'),
+  used: new THREE.Color('#F08A3C'),
   petrol: new THREE.Color('#45767E'),
   petrol200: new THREE.Color('#C2E2E8'),
   petrol100: new THREE.Color('#D8F3F7'),
@@ -113,70 +116,97 @@ export function sphereFillHeight(frac) {
   return (lo + hi) / 2 // hauteur depuis le bas, 0..2
 }
 
-// ---------- Scène 1 : la sphère d'énergie, remplie de soleil ----------
+// ---------- Scène 1 : le soleil, rempli à hauteur de la part solaire ----------
+// Rayons pâte à modeler : étoile à 12 branches arrondies, extrudée et bombée
+function rayShape() {
+  const s = new THREE.Shape(), K = 240
+  for (let i = 0; i <= K; i++) {
+    const a = (i / K) * Math.PI * 2
+    const r = 1.3 + 0.32 * Math.pow(0.5 + 0.5 * Math.cos(a * 12), 1.6)
+    i ? s.lineTo(Math.cos(a) * r, Math.sin(a) * r) : s.moveTo(Math.cos(a) * r, Math.sin(a) * r)
+  }
+  return s
+}
+
 export function sphereScene({ share, onTouch }) {
   const scene = new THREE.Scene()
   const camera = new THREE.PerspectiveCamera(32, 1, 0.1, 50)
-  camera.position.set(0, 0.35, 5.2); camera.lookAt(0, 0, 0)
+  camera.position.set(0, 0.25, 6.6); camera.lookAt(0, 0, 0)
   const target = sphereFillHeight(share) - 1
+  const L = new THREE.Vector3(-0.5, 0.8, 0.9).normalize()
+  scene.add(new THREE.HemisphereLight(0xfff4d6, 0xc98a1c, 1.4))
+  const key = new THREE.DirectionalLight(0xffffff, 2.4); key.position.copy(L).multiplyScalar(5); scene.add(key)
+
+  const sun = new THREE.Group(); scene.add(sun)
+  const rays = new THREE.Mesh(
+    new THREE.ExtrudeGeometry(rayShape(), { depth: 0.18, bevelEnabled: true, bevelThickness: 0.2, bevelSize: 0.12, bevelSegments: 8, curveSegments: 1 }),
+    new THREE.MeshStandardMaterial({ color: '#F2B70F', roughness: 0.5, metalness: 0 }),
+  )
+  rays.position.z = -0.55
+  sun.add(rays)
+
   const u = {
     uLevel: { value: -1.02 }, uTilt: { value: new THREE.Vector2() }, uTime: { value: 0 },
-    uA: { value: C.solar }, uB: { value: C.solarLight },
+    uA: { value: new THREE.Color('#F2B70F') }, uB: { value: new THREE.Color('#FBD540') }, uCool: { value: new THREE.Color('#EDE6D2') }, uL: { value: L },
   }
-  const liquid = new THREE.Mesh(
+  const body = new THREE.Mesh(
     new THREE.SphereGeometry(1, 96, 64),
     new THREE.ShaderMaterial({
-      uniforms: u, side: THREE.DoubleSide,
+      uniforms: u,
       vertexShader: `varying vec3 vP; varying vec3 vN; varying vec3 vV;
         void main(){ vec4 w = modelMatrix*vec4(position,1.); vP = w.xyz; vN = normalize(mat3(modelMatrix)*normal); vV = normalize(cameraPosition - w.xyz); gl_Position = projectionMatrix*viewMatrix*w; }`,
-      fragmentShader: `uniform float uLevel; uniform vec2 uTilt; uniform float uTime; uniform vec3 uA; uniform vec3 uB;
+      fragmentShader: `uniform float uLevel; uniform vec2 uTilt; uniform float uTime; uniform vec3 uA; uniform vec3 uB; uniform vec3 uCool; uniform vec3 uL;
         varying vec3 vP; varying vec3 vN; varying vec3 vV;
         void main(){
-          float wave = 0.018*sin(vP.x*6.+uTime*2.3)+0.014*sin(vP.z*7.-uTime*1.7);
+          float wave = 0.02*sin(vP.x*6.+uTime*2.3)+0.015*sin(vP.z*7.-uTime*1.7);
           float h = uLevel + uTilt.x*vP.x + uTilt.y*vP.z + wave;
-          if (vP.y > h) discard;
-          if (!gl_FrontFacing) { // surface du liquide vue par l'ouverture
-            float r = length(vP.xz);
-            gl_FragColor = vec4(mix(uB, vec3(1.), 0.25 + 0.2*sin(r*14.-uTime*3.)*0.3), 1.); return;
-          }
-          float f = pow(1. - max(dot(vN, vV), 0.), 2.);
-          float depth = clamp((h - vP.y)*0.6, 0., 1.);
-          vec3 col = mix(uB, uA, depth*0.9 + 0.1);
-          col += f*0.35 + smoothstep(0.03, 0., h - vP.y)*0.25;
+          float on = step(vP.y, h);
+          // rendu pâte à modeler : diffus enveloppant, reflet doux, bord chaud
+          float d = dot(vN, uL)*.5 + .5;
+          float mu = max(dot(vN, vV), 0.);
+          vec3 base = on > .5 ? mix(uA, uB, smoothstep(-.6, .9, vN.y*.6 + d*.6)) : uCool;
+          vec3 col = base*(.62 + .5*d);
+          col += pow(max(dot(reflect(-uL, vN), vV), 0.), 18.)*.22;
+          col += pow(1. - mu, 2.5)*(on > .5 ? vec3(.35, .18, 0.) : vec3(.05));
+          col = mix(col, col*.86, (1. - on)*smoothstep(.05, 0., vP.y - h)); // lisière de la part réseau
           gl_FragColor = vec4(col, 1.);
+          #include <colorspace_fragment>
         }`,
     }),
   )
-  const glass = new THREE.Mesh(
-    new THREE.SphereGeometry(1.025, 96, 64),
-    new THREE.ShaderMaterial({
-      transparent: true, depthWrite: false,
-      uniforms: { uC: { value: C.petrol } },
-      vertexShader: `varying vec3 vN; varying vec3 vV; void main(){ vec4 w = modelMatrix*vec4(position,1.); vN = normalize(mat3(modelMatrix)*normal); vV = normalize(cameraPosition-w.xyz); gl_Position = projectionMatrix*viewMatrix*w; }`,
-      fragmentShader: `uniform vec3 uC; varying vec3 vN; varying vec3 vV; void main(){ float f = pow(1.-max(dot(vN,vV),0.), 2.6); vec3 l = normalize(vec3(-.5,.8,.6)); float s = pow(max(dot(reflect(-l,vN), vV),0.), 40.); gl_FragColor = vec4(mix(uC, vec3(1.), s), f*0.55 + s*0.8 + 0.04); }`,
-    }),
-  )
-  // anneau-repère au niveau exact (fidélité : marque la frontière 53 %)
-  const ring = new THREE.Mesh(new THREE.TorusGeometry(1, 0.008, 8, 128), new THREE.MeshBasicMaterial({ color: C.petrol800, transparent: true, opacity: 0.55 }))
+  sun.add(body)
+
+  // visage
+  const ink = new THREE.MeshStandardMaterial({ color: '#140c02', roughness: 0.18, metalness: 0 })
+  const onSurf = (o, x, y, lift = 0) => { o.position.set(x, y, Math.sqrt(Math.max(0, 1 - x * x - y * y)) + lift); o.lookAt(o.position.clone().multiplyScalar(2)); return o }
+  const face = new THREE.Group(); sun.add(face)
+  const eyes = [-0.27, 0.27].map((x) => { const e = onSurf(new THREE.Mesh(new THREE.SphereGeometry(0.07, 24, 16), ink), x, 0.14, -0.01); e.scale.set(0.85, 1.3, 0.55); face.add(e); return e })
+  ;[-1, 1].forEach((sd) => {
+    const b = new THREE.Mesh(new THREE.TorusGeometry(0.16, 0.026, 10, 32, 1.1), ink)
+    onSurf(b, 0.3 * sd, 0.28, -0.015); b.rotateZ(Math.PI / 2 - 0.55 + sd * 0.12); face.add(b)
+  })
+  const smile = new THREE.Mesh(new THREE.TorusGeometry(0.34, 0.032, 10, 48, 1.15), ink)
+  onSurf(smile, 0.02, 0.1, -0.058); smile.rotateZ(-Math.PI / 2 - 0.575); face.add(smile)
+
+  const glass = new THREE.Mesh(new THREE.SphereGeometry(1.02, 48, 32), new THREE.MeshBasicMaterial({ transparent: true, opacity: 0, depthWrite: false }))
+  sun.add(glass) // cible du toucher
+  // anneau-repère au niveau exact (fidélité : marque la frontière de la part solaire)
+  const ring = new THREE.Mesh(new THREE.TorusGeometry(1.004, 0.008, 8, 128), new THREE.MeshBasicMaterial({ color: C.petrol800, transparent: true, opacity: 0.55 }))
   ring.rotation.x = Math.PI / 2
-  // bulles de soleil
-  const N = 70, bub = new THREE.InstancedMesh(new THREE.SphereGeometry(0.018, 8, 6), new THREE.MeshBasicMaterial({ color: 0xffffff, transparent: true, opacity: 0.7 }), N)
-  const seeds = Array.from({ length: N }, () => ({ a: Math.random() * 6.28, r: Math.sqrt(Math.random()) * 0.8, s: 0.08 + Math.random() * 0.2, y: Math.random() }))
-  const m4 = new THREE.Matrix4()
-  scene.add(liquid, glass, ring, bub)
+  scene.add(ring)
   // ombre portée douce
-  const shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.ShaderMaterial({ transparent: true, depthWrite: false, vertexShader: `varying vec2 vU; void main(){ vU=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`, fragmentShader: `varying vec2 vU; void main(){ float d=length(vU-.5)*2.; gl_FragColor=vec4(0.012,0.13,0.15,(1.-smoothstep(0.,1.,d))*0.18);}` }))
-  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -1.18; shadow.scale.set(1.1, 1.1, 1)
+  const shadow = new THREE.Mesh(new THREE.CircleGeometry(1, 48), new THREE.ShaderMaterial({ transparent: true, depthWrite: false, vertexShader: `varying vec2 vU; void main(){ vU=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`, fragmentShader: `varying vec2 vU; void main(){ float d=length(vU-.5)*2.; gl_FragColor=vec4(0.46,0.28,0.18,(1.-smoothstep(0.,1.,d))*0.16);}` }))
+  shadow.rotation.x = -Math.PI / 2; shadow.position.y = -1.8; shadow.scale.set(1.4, 1.4, 1)
   scene.add(shadow)
 
-  let tilt = new THREE.Vector2(), tiltV = new THREE.Vector2(), level = -1.02, fillT = 0, off = null, t0 = 0
+  let tilt = new THREE.Vector2(), tiltV = new THREE.Vector2(), level = -1.02, fillT = 0, off = null, t0 = 0, blink = 2
   const ray = new THREE.Raycaster(), ndc = new THREE.Vector2()
   return {
     scene, camera,
     resize(w, h) {
       camera.aspect = w / h
-      // garde toute la sphère visible quel que soit le format
-      camera.position.z = w / h < 0.8 ? 5.2 / Math.max(w / h / 0.8, 0.62) : 5.2
+      // garde tout le soleil (rayons compris) visible quel que soit le format
+      camera.position.z = w / h < 0.95 ? 6.6 / Math.max(w / h / 0.95, 0.55) : 6.6
       camera.updateProjectionMatrix()
     },
     attach(canvas) {
@@ -188,7 +218,7 @@ export function sphereScene({ share, onTouch }) {
           ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1)
           ray.setFromCamera(ndc, camera)
           const hit = ray.intersectObject(glass)[0]
-          if (hit) { tiltV.x += (Math.random() - 0.5) * 0.12; tiltV.y += 0.05; onTouch(hit.point.y < target ? 'solar' : 'grid') }
+          if (hit) { tiltV.x += (Math.random() - 0.5) * 0.12; tiltV.y += 0.05; blink = 0; onTouch(hit.point.y < target ? 'solar' : 'grid') }
           else onTouch(null)
         },
       })
@@ -209,17 +239,15 @@ export function sphereScene({ share, onTouch }) {
       const rr = Math.sqrt(Math.max(0, 1 - target * target))
       ring.position.y = target; ring.scale.set(rr, rr, 1)
       ring.material.opacity = 0.55 * e
-      for (let i = 0; i < N; i++) {
-        const s = seeds[i]
-        s.y += s.s * dt * (RM ? 0 : 1); if (s.y > 1) s.y = 0
-        const yy = -1 + s.y * (level + 1)
-        const maxR = Math.sqrt(Math.max(0, 1 - yy * yy)) * 0.9
-        const r = Math.min(s.r, maxR)
-        m4.makeTranslation(Math.cos(s.a + t * 0.2) * r, yy, Math.sin(s.a + t * 0.2) * r)
-        bub.setMatrixAt(i, m4)
-      }
-      bub.instanceMatrix.needsUpdate = true
-      if (!RM) { liquid.rotation.y = t * 0.15; glass.rotation.y = t * 0.15 }
+      // apparition des rayons + petite vie : rotation lente, regard qui suit le ballottement, clignement
+      rays.scale.setScalar(0.6 + 0.4 * e)
+      if (RM) return
+      rays.rotation.z = t * 0.08
+      face.rotation.set(tilt.y * 0.5, -tilt.x * 0.6, 0)
+      blink += dt; if (blink > 4) blink = 0
+      const k = blink < 0.16 ? Math.abs(blink / 0.08 - 1) : 1
+      eyes.forEach((o) => (o.scale.y = 1.3 * Math.max(0.12, k)))
+      sun.position.y = Math.sin(t * 1.2) * 0.03
     },
   }
 }
@@ -252,20 +280,20 @@ export function vaultScene({ days, cap, onSelect }) {
     const spoke = new THREE.Mesh(new THREE.CylinderGeometry(0.04, 0.04, 1.5, 12), hub.material)
     spoke.rotation.z = Math.PI / 2; spoke.rotation.y = (k * Math.PI) / 6; spoke.position.y = 0.2; ringG.add(spoke)
   }
-  // repère de capacité : cercle à 100 kWh
-  const capRing = new THREE.Mesh(new THREE.TorusGeometry(R, 0.006, 6, 256), new THREE.MeshBasicMaterial({ color: C.petrol800, transparent: true, opacity: 0.35 }))
-  capRing.rotation.x = Math.PI / 2; capRing.position.y = H; ringG.add(capRing)
-  // barres : 1 par jour, hauteur = niveau fin de journée / capacité (proportions réelles)
+  // 2 rangées concentriques, 1 barre par jour : intérieur = kWh mis en batterie (bleu, vert si pleine), extérieur = kWh consommés depuis la batterie (orange)
   const geo = new THREE.BoxGeometry(1, 1, 1); geo.translate(0, 0.5, 0)
-  const bars = new THREE.InstancedMesh(geo, new THREE.MeshStandardMaterial({ roughness: 0.4, metalness: 0.05 }), N)
+  const mat = new THREE.MeshStandardMaterial({ roughness: 0.4, metalness: 0.05 })
+  const bars = new THREE.InstancedMesh(geo, mat, N), used = new THREE.InstancedMesh(geo, mat, N)
   const w = R * step * 0.82
-  const col = new THREE.Color()
-  const heights = days.map((d) => Math.max(0.012, (d[3] / cap) * H))
+  const maxDay = Math.max(...days.map((d) => Math.max(d[5], d[6])))
+  const hIn = days.map((d) => Math.max(0.012, (d[5] / maxDay) * H)), hOut = days.map((d) => Math.max(0.012, (d[6] / maxDay) * H))
+  const heights = days.map((d, i) => Math.max(hIn[i], hOut[i]))
+  const DR = 0.07 // écart radial entre les 2 rangées
   for (let i = 0; i < N; i++) {
-    col.copy(days[i][7] > 0 ? C.solar : C.battery) // or = batterie pleine ce jour-là (surplus perdu)
-    bars.setColorAt(i, col)
+    bars.setColorAt(i, days[i][7] > 0 ? C.economy : C.battery)
+    used.setColorAt(i, C.used)
   }
-  ringG.add(bars)
+  ringG.add(bars, used)
   // mois
   const months = ['janv', 'févr', 'mars', 'avr', 'mai', 'juin', 'juil', 'août', 'sept', 'oct', 'nov', 'déc']
   days.forEach((d, i) => {
@@ -293,11 +321,13 @@ export function vaultScene({ days, cap, onSelect }) {
       const k = Math.min(1, Math.max(0, g * 1.6 - (i / N) * 0.6)) // pousse jour après jour
       const e = 1 - Math.pow(1 - k, 3)
       q.setFromAxisAngle(Y, a)
-      v.set(Math.sin(a) * R, 0, Math.cos(a) * R)
-      sc.set(w, heights[i] * e + 0.0001, 0.12)
+      v.set(Math.sin(a) * (R - DR), 0, Math.cos(a) * (R - DR))
+      sc.set(w, hIn[i] * e + 0.0001, 0.11)
       bars.setMatrixAt(i, m4.compose(v, q, sc))
+      v.set(Math.sin(a) * (R + DR), 0, Math.cos(a) * (R + DR)); sc.y = hOut[i] * e + 0.0001
+      used.setMatrixAt(i, m4.compose(v, q, sc))
     }
-    bars.instanceMatrix.needsUpdate = true
+    bars.instanceMatrix.needsUpdate = used.instanceMatrix.needsUpdate = true
   }
   layout(RM ? 1 : 0)
   return {
@@ -318,7 +348,7 @@ export function vaultScene({ days, cap, onSelect }) {
           const r = canvas.getBoundingClientRect()
           ndc.set(((e.clientX - r.left) / r.width) * 2 - 1, -((e.clientY - r.top) / r.height) * 2 + 1)
           ray.setFromCamera(ndc, camera)
-          const hit = ray.intersectObject(bars)[0]
+          const hit = ray.intersectObjects([bars, used])[0]
           if (hit && hit.instanceId != null) {
             // amène le jour touché devant, en prenant le chemin le plus court
             const base = hit.instanceId * step
@@ -340,9 +370,210 @@ export function vaultScene({ days, cap, onSelect }) {
       // surlignage du jour lu
       const a = -i * step + rot
       sel.position.set(Math.sin(a) * R, 0, Math.cos(a) * R); sel.rotation.y = a
-      sel.scale.set(w * 1.8, heights[i] * Math.min(1, grow * 1.6) + 0.04, 0.14)
+      sel.scale.set(w * 1.8, heights[i] * Math.min(1, grow * 1.6) + 0.04, 0.3)
       camera.position.set(0, Math.sin(elev) * dist, Math.cos(elev) * dist)
       camera.lookAt(0, 0.45, 0)
+    },
+  }
+}
+
+// ---------- Scène 3 : les équipements, en pâte à modeler, remplis de soleil ----------
+// Même matière que le soleil : diffus enveloppant, bord chaud, part vide crème, liquide doré qui ballotte
+function fillMaterial(u) {
+  return new THREE.ShaderMaterial({
+    uniforms: u,
+    vertexShader: `varying vec3 vO; varying vec3 vN; varying vec3 vV;
+      void main(){ vO = position; vec4 w = modelMatrix*vec4(position,1.); vN = normalize(mat3(modelMatrix)*normal); vV = normalize(cameraPosition - w.xyz); gl_Position = projectionMatrix*viewMatrix*w; }`,
+    fragmentShader: `uniform float uLevel; uniform vec2 uTilt; uniform float uTime; uniform vec3 uA; uniform vec3 uB; uniform vec3 uCool; uniform vec3 uL;
+      varying vec3 vO; varying vec3 vN; varying vec3 vV;
+      void main(){
+        float wave = 0.018*sin(vO.x*9.+uTime*2.3)+0.012*sin(vO.z*11.-uTime*1.7);
+        float h = uLevel + uTilt.x*vO.x + uTilt.y*vO.z + wave;
+        float on = step(vO.y, h);
+        float d = dot(vN, uL)*.5 + .5;
+        float mu = max(dot(vN, vV), 0.);
+        vec3 base = on > .5 ? mix(uA, uB, smoothstep(-.6, .9, vN.y*.6 + d*.6)) : uCool;
+        vec3 col = base*(.62 + .5*d);
+        col += pow(max(dot(reflect(-uL, vN), vV), 0.), 18.)*.22;
+        col += pow(1. - mu, 2.5)*(on > .5 ? vec3(.35, .18, 0.) : vec3(.05));
+        col = mix(col, col*.86, (1. - on)*smoothstep(.04, 0., vO.y - h));
+        col = mix(col, uB*1.08, on*smoothstep(.025, 0., abs(vO.y - h))*.7); // ménisque lumineux
+        gl_FragColor = vec4(col, 1.);
+        #include <colorspace_fragment>
+      }`,
+  })
+}
+
+// Capsule (ballon) : hauteur de remplissage pour une fraction de VOLUME, comme la sphère du soleil
+function capsuleFillHeight(frac, r, L) {
+  const cap = (h) => (Math.PI * h * h * (3 * r - h)) / 3
+  const H = L + 2 * r, tot = (4 / 3) * Math.PI * r ** 3 + Math.PI * r * r * L
+  const V = (h) => (h <= r ? cap(h) : h <= r + L ? cap(r) + Math.PI * r * r * (h - r) : tot - cap(H - h))
+  let lo = 0, hi = H
+  for (let i = 0; i < 40; i++) { const m = (lo + hi) / 2; V(m) / tot < frac ? (lo = m) : (hi = m) }
+  return (lo + hi) / 2 - H / 2 // y local, centré
+}
+
+export function equipScene({ equip, anchors }) {
+  const scene = new THREE.Scene()
+  const camera = new THREE.OrthographicCamera(0, 1, 0, -1, 0.1, 4000)
+  camera.position.z = 2000
+  const L = new THREE.Vector3(-0.5, 0.8, 0.9).normalize()
+  scene.add(new THREE.HemisphereLight(0xfff4d6, 0xc98a1c, 1.4))
+  const key = new THREE.DirectionalLight(0xffffff, 2.4); key.position.copy(L).multiplyScalar(5); scene.add(key)
+
+  const ink = new THREE.MeshStandardMaterial({ color: '#140c02', roughness: 0.18 })
+  const clay = (c) => new THREE.MeshStandardMaterial({ color: c, roughness: 0.55 })
+  const shadowMat = new THREE.ShaderMaterial({ transparent: true, depthWrite: false, vertexShader: `varying vec2 vU; void main(){ vU=uv; gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`, fragmentShader: `varying vec2 vU; void main(){ float d=length(vU-.5)*2.; gl_FragColor=vec4(0.46,0.28,0.18,(1.-smoothstep(0.,1.,d))*0.2);}` })
+
+  // visage du soleil, posé sur une face avant plate (z)
+  function addFace(g, z, y, s = 1) {
+    const f = new THREE.Group(); f.position.set(0, y, z); f.scale.setScalar(s); g.add(f)
+    const eyes = [-0.1, 0.1].map((x) => { const e = new THREE.Mesh(new THREE.SphereGeometry(0.035, 20, 12), ink); e.position.set(x, 0.04, 0); e.scale.set(0.85, 1.3, 0.55); f.add(e); return e })
+    const sm = new THREE.Mesh(new THREE.TorusGeometry(0.12, 0.013, 8, 32, 1.15), ink)
+    sm.position.set(0, 0.06, -0.004); sm.rotation.z = -Math.PI / 2 - 0.575; f.add(sm)
+    return { f, eyes }
+  }
+
+  // modèles normalisés : hauteur 1, centrés ; w = largeur pour le cadrage
+  const builders = [
+    // Lave-linge : cube arrondi, hublot (le visage est dedans), bandeau de commande
+    (acc) => {
+      const g = new THREE.Group(), W = 0.82, H = 1, Dp = 0.74
+      const body = new THREE.Mesh(new RoundedBoxGeometry(W, H, Dp, 6, 0.14), null)
+      g.add(body)
+      const port = new THREE.Mesh(new THREE.TorusGeometry(0.27, 0.05, 16, 64), clay(acc)); port.position.set(0, -0.08, Dp / 2 + 0.01); g.add(port)
+      const knob = new THREE.Mesh(new THREE.CylinderGeometry(0.06, 0.06, 0.06, 24), clay(acc)); knob.rotation.x = Math.PI / 2; knob.position.set(0.24, 0.36, Dp / 2 + 0.01); g.add(knob)
+      ;[-0.24, -0.13].forEach((x) => { const b = new THREE.Mesh(new THREE.SphereGeometry(0.03, 12, 8), clay(acc)); b.position.set(x, 0.36, Dp / 2); g.add(b) })
+      const face = addFace(g, Dp / 2 + 0.005, -0.1, 1)
+      return { g, body, w: W, y0: -H / 2, y1: H / 2, face, spin: port, sec: [W, Dp, 0.14] }
+    },
+    // Ballon d'eau chaude : capsule, cerclage et tuyaux
+    (acc, frac) => {
+      const g = new THREE.Group(), r = 0.3, Lc = 0.4
+      const body = new THREE.Mesh(new THREE.CapsuleGeometry(r, Lc, 12, 48), null); g.add(body)
+      ;[0.22, -0.22].forEach((y) => { const t = new THREE.Mesh(new THREE.TorusGeometry(r + 0.004, 0.022, 10, 64), clay(acc)); t.rotation.x = Math.PI / 2; t.position.y = y; g.add(t) })
+      ;[-0.1, 0.1].forEach((x) => { const p = new THREE.Mesh(new THREE.CylinderGeometry(0.035, 0.035, 0.14, 16), clay(acc)); p.position.set(x, -0.54, 0); g.add(p) })
+      const dial = new THREE.Mesh(new THREE.CylinderGeometry(0.045, 0.045, 0.04, 20), clay(acc)); dial.rotation.x = Math.PI / 2; dial.position.set(0, 0.31, 0.29); g.add(dial)
+      const face = addFace(g, r + 0.002, 0.0, 1)
+      return { g, body, w: 0.66, level: capsuleFillHeight(frac, r, Lc), face, sec: [2 * r, 2 * r, r] }
+    },
+    // Pompe à chaleur : caisson large, ventilateur qui tourne au soleil
+    (acc) => {
+      const g = new THREE.Group(), W = 1.2, H = 0.86, Dp = 0.5
+      const body = new THREE.Mesh(new RoundedBoxGeometry(W, H, Dp, 6, 0.12), null); g.add(body)
+      const fanG = new THREE.Group(); fanG.position.set(0.24, 0, Dp / 2 + 0.01); g.add(fanG)
+      const ring = new THREE.Mesh(new THREE.TorusGeometry(0.28, 0.045, 16, 64), clay(acc)); fanG.add(ring)
+      const blades = new THREE.Group(); fanG.add(blades)
+      for (let k = 0; k < 3; k++) {
+        const b = new THREE.Mesh(new THREE.SphereGeometry(0.2, 20, 12), clay(acc)); b.scale.set(0.45, 1, 0.12); b.position.y = 0.12
+        const piv = new THREE.Group(); piv.rotation.z = (k * Math.PI * 2) / 3; piv.add(b); blades.add(piv)
+      }
+      const hub = new THREE.Mesh(new THREE.SphereGeometry(0.06, 16, 10), clay(acc)); hub.scale.z = 0.6; blades.add(hub)
+      ;[-0.42, 0.42].forEach((x) => { const f = new THREE.Mesh(new THREE.BoxGeometry(0.1, 0.06, 0.1), clay(acc)); f.position.set(x, -H / 2 - 0.02, 0); g.add(f) })
+      const face = addFace(g, Dp / 2 + 0.005, 0.02, 0.9); face.f.position.x = -0.3
+      return { g, body, w: W, y0: -H / 2, y1: H / 2, face, fan: blades, sec: [W, Dp, 0.12] }
+    },
+  ]
+  const accents = ['#85CEDF', '#8C99C8', '#EC8834']
+
+  const items = equip.map((q, i) => {
+    const frac = q.pct / 100
+    const m = builders[i](accents[i], frac)
+    const u = {
+      uLevel: { value: -1 }, uTilt: { value: new THREE.Vector2() }, uTime: { value: 0 },
+      uA: { value: new THREE.Color('#F2B70F') }, uB: { value: new THREE.Color('#FBD540') }, uCool: { value: new THREE.Color('#EDE6D2') }, uL: { value: L },
+    }
+    m.body.material = fillMaterial(u)
+    const target = m.level ?? m.y0 + (m.y1 - m.y0) * frac // boîtes : hauteur = volume
+    const root = new THREE.Group(); root.add(m.g); scene.add(root)
+    // anneau-repère au niveau exact : frontière de la part solaire
+    const [sw, sd, sr] = m.sec, rr = new THREE.Shape(), x0 = -sw / 2 - 0.004, z0 = -sd / 2 - 0.004, x1 = -x0, z1 = -z0, k = sr
+    rr.moveTo(x0 + k, z0); rr.lineTo(x1 - k, z0); rr.quadraticCurveTo(x1, z0, x1, z0 + k); rr.lineTo(x1, z1 - k); rr.quadraticCurveTo(x1, z1, x1 - k, z1)
+    rr.lineTo(x0 + k, z1); rr.quadraticCurveTo(x0, z1, x0, z1 - k); rr.lineTo(x0, z0 + k); rr.quadraticCurveTo(x0, z0, x0 + k, z0)
+    const pts = rr.getSpacedPoints(160).map((p) => new THREE.Vector3(p.x, target, p.y))
+    const ring = new THREE.Mesh(new THREE.TubeGeometry(new THREE.CatmullRomCurve3(pts, true), 200, 0.007, 6, true), new THREE.MeshBasicMaterial({ color: C.petrol800, transparent: true, opacity: 0 }))
+    m.g.add(ring)
+    // décor (hublot, cerclages, ventilateur…) : apparaît comme les rayons du soleil
+    const deco = m.g.children.filter((c) => c !== m.body && c !== m.face.f && c !== ring).map((o) => ({ o, s: o.scale.clone() }))
+    const sh = new THREE.Mesh(new THREE.CircleGeometry(0.5, 40), shadowMat); sh.rotation.x = -Math.PI / 2; sh.position.y = -0.62; sh.scale.set(m.w * 1.25, 0.9, 1); root.add(sh)
+    return { ...m, u, frac, target, root, ring, deco, tilt: new THREE.Vector2(), tv: new THREE.Vector2(), fillT: 0, blink: 1.2 * i, off: i * 1.3 }
+  })
+
+  let need = true, age = 0, off = null
+  const ray = new THREE.Raycaster(), ndc = new THREE.Vector2(), lp = new THREE.Vector3()
+  function place() {
+    const a = anchors(); if (!a) return
+    items.forEach((it, i) => {
+      const r = a[i]
+      const s = Math.min(r.h * 0.8, (r.w * 0.86) / it.w)
+      it.root.position.set(r.x, -r.y, 0); it.root.scale.setScalar(s)
+    })
+  }
+  const nearest = (x) => items.reduce((b, it, i) => (Math.abs(it.root.position.x - x) < Math.abs(items[b].root.position.x - x) ? i : b), 0)
+  return {
+    scene, camera,
+    // toucher, comme le soleil : petite secousse, clignement, et lecture soleil / réseau selon la hauteur touchée
+    pick(i, cx, cy, el) {
+      const it = items[i]
+      it.tv.x += (Math.random() - 0.5) * 0.12; it.tv.y += 0.05; it.blink = 0
+      if (cx == null) return 'solar'
+      const r = el.getBoundingClientRect()
+      ndc.set(((cx - r.left) / r.width) * 2 - 1, -((cy - r.top) / r.height) * 2 + 1)
+      ray.setFromCamera(ndc, camera)
+      const hit = ray.intersectObject(it.body)[0]
+      if (!hit) return null
+      lp.copy(hit.point); it.body.worldToLocal(lp)
+      return lp.y < it.target ? 'solar' : 'grid'
+    },
+    resize(w, h) {
+      camera.left = 0; camera.right = w; camera.top = 0; camera.bottom = -h
+      camera.updateProjectionMatrix(); need = true
+    },
+    attach(canvas) {
+      age = 0; need = true
+      // secouer : glisser sur la scène fait ballotter l'appareil le plus proche (sans capturer le pointeur, pour garder les clics des boutons)
+      const el = canvas.parentElement
+      let last = null
+      const down = (e) => { last = { x: e.clientX, y: e.clientY } }
+      const move = (e) => {
+        if (!last) return
+        const dx = e.clientX - last.x, dy = e.clientY - last.y; last = { x: e.clientX, y: e.clientY }
+        const it = items[nearest(e.clientX - el.getBoundingClientRect().left)]
+        it.tv.x -= dx * 0.0016; it.tv.y -= dy * 0.0016
+      }
+      const up = () => { last = null }
+      el.addEventListener('pointerdown', down); addEventListener('pointermove', move); addEventListener('pointerup', up); addEventListener('pointercancel', up)
+      off = () => { el.removeEventListener('pointerdown', down); removeEventListener('pointermove', move); removeEventListener('pointerup', up); removeEventListener('pointercancel', up) }
+    },
+    detach() { off && off() },
+    update(dt, t) {
+      age += dt
+      if (need || age < 2) { place(); need = false } // ancrage sur la mise en page (polices, transition)
+      items.forEach((it, i) => {
+        // remplissage d'entrée (expo out, même durée que le soleil), décalé comme les compteurs
+        if (age > 0.25 + i * 0.18) it.fillT = Math.min(1, it.fillT + dt / (RM ? 0.01 : 2.2))
+        const e = 1 - Math.pow(2, -10 * it.fillT)
+        const lo = (it.y0 ?? -0.5) - 0.02
+        it.u.uLevel.value = lo + (it.target - lo) * e
+        // ressort de ballottement
+        it.tv.x += -it.tilt.x * 18 * dt; it.tv.y += -it.tilt.y * 18 * dt
+        it.tv.multiplyScalar(Math.pow(0.04, dt))
+        it.tilt.addScaledVector(it.tv, dt * 10); it.tilt.clampScalar(-0.45, 0.45)
+        it.u.uTilt.value.copy(it.tilt); it.u.uTime.value = RM ? 0 : t + it.off
+        it.ring.material.opacity = 0.55 * e
+        it.deco.forEach((d) => d.o.scale.copy(d.s).multiplyScalar(0.6 + 0.4 * e))
+        it.g.rotation.set(0.3, -0.35, 0)
+        if (RM) return
+        // petite vie : décor qui tourne, regard qui suit le ballottement, clignement, flottement
+        if (it.fan) it.fan.rotation.z -= dt * (1 + 9 * it.frac * e)
+        if (it.spin) it.spin.rotation.z = t * 0.08 * 4
+        it.face.f.rotation.set(it.tilt.y * 0.5, -it.tilt.x * 0.6, 0)
+        it.blink += dt; if (it.blink > 4) it.blink = 0
+        const k = it.blink < 0.16 ? Math.abs(it.blink / 0.08 - 1) : 1
+        it.face.eyes.forEach((o) => (o.scale.y = 1.3 * Math.max(0.12, k)))
+        it.g.position.y = Math.sin(t * 1.2 + it.off) * 0.03
+      })
     },
   }
 }

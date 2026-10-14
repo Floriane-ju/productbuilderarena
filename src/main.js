@@ -2,7 +2,7 @@ import './style.css'
 import gsap from 'gsap'
 import SplitType from 'split-type'
 import D from './data.json'
-import { hasWebGL, createGL, sphereScene, vaultScene, sphereFillHeight } from './gl.js'
+import { hasWebGL, createGL, sphereScene, vaultScene, equipScene, sphereFillHeight } from './gl.js'
 
 const RM = matchMedia('(prefers-reduced-motion: reduce)').matches
 const FINE = matchMedia('(pointer: fine)').matches
@@ -65,19 +65,15 @@ const screens = [
       return `
       <p class="eyebrow">Le ticket de caisse inversé</p>
       <h2 class="title split">Voici exactement d'où vient votre argent.</h2>
-      <p class="kpi"><span class="num gain">${sgn(D.gain, 0)}</span></p>
-      <p class="kpi-sub">gagnés sur votre première année, tous frais déduits.</p>
       <div class="ticket" data-explore>
         <div class="t-head"><p class="brand">mylight<b>150</b></p><p>Bilan annuel · ${D.client.ville}</p><p>${new Date(D.client.since).toLocaleDateString('fr-FR')} → ${new Date(days.at(-1)[0]).toLocaleDateString('fr-FR')}</p></div>
         <p class="t-sec">Ce que vous avez investi</p>
         <ul>${costs.map(line).join('')}</ul>
         <p class="t-sec">Ce que le soleil vous a rendu</p>
         <ul>${gains.map(line).join('')}</ul>
-        <div class="t-total"><span>Gain net</span><span class="t-sum">${sgn(D.gain, 0)}</span></div>
+        <div class="t-total"><span>Gain net · tous frais déduits</span><span class="t-sum">${sgn(D.gain, 0)}</span></div>
         <p class="t-foot">Touchez une ligne pour le détail</p>
-        <div class="stamp" aria-hidden="true">Payé par<br/>le soleil</div>
       </div>
-      <button class="link-btn replay">Réimprimer le ticket</button>
       <details class="alt"><summary>Version texte</summary><p>Gain net : ${eur(D.gain)}. ${D.ticket.map((t) => `${t.label} : ${sgn(t.eur)}`).join('. ')}. Calcul : énergie solaire consommée et restituée, valorisée au prix du kWh heures pleines / heures creuses, moins l'abonnement de stockage et la contribution autoproducteur.</p></details>`
     },
     enter(el) {
@@ -86,7 +82,6 @@ const screens = [
         b.setAttribute('aria-expanded', open); b.nextElementSibling.hidden = !open
         if (open) gsap.from(b.nextElementSibling, { height: 0, opacity: 0, duration: 0.35, ease: 'power3.out' })
       }))
-      $('.replay', el).onclick = () => printTicket(el)
       printTicket(el)
     },
   },
@@ -96,7 +91,7 @@ const screens = [
       <p class="eyebrow">Gratuit à X %, par équipement</p>
       <h2 class="title split">Ce que vous faites tourner au soleil est presque offert.</h2>
       <p class="readout static" aria-live="polite">Touchez un équipement</p>
-      <div class="vessels" data-explore>
+      <div class="stage warm vessels" data-explore data-cursor="Touchez">
         ${D.equip.map((q, i) => `
           <button class="vessel v${i}" aria-label="${q.name} : ${q.pct} % couvert par le soleil">
             <span class="v-pct"><b>${q.pct}</b>%</span>
@@ -108,11 +103,29 @@ const screens = [
       <ul class="legend"><li><i class="sw sw-solar"></i><span>Part couverte par le soleil, direct ou batterie</span></li></ul>
       <details class="alt"><summary>Version texte</summary><p>${D.equip.map((q) => `${q.name} : ${q.pct} % couvert par le soleil (${nf(q.free_kwh)} kWh sur ${nf(q.kwh)}).`).join(' ')}</p></details>`,
     enter(el) {
-      const ro = $('.readout', el)
+      const ro = $('.readout', el), stage = $('.vessels', el)
+      let sc = null
+      if (gl) {
+        // les objets 3D se posent pile dans l'emplacement de chaque bocal HTML
+        sc = equipScene({
+          equip: D.equip,
+          anchors: () => {
+            const s = stage.getBoundingClientRect()
+            return $$('.vessel', el).map((v) => {
+              const b = v.getBoundingClientRect(), g = $('.v-glass', v).getBoundingClientRect()
+              return { x: g.left + g.width / 2 - s.left, y: g.top + g.height / 2 - s.top, w: b.width, h: g.height }
+            })
+          },
+        })
+        gl.mount(stage, sc)
+      }
       $$('.vessel', el).forEach((v, i) => {
         const q = D.equip[i]
-        v.onclick = () => {
-          ro.innerHTML = `<b>${q.name}</b> ${nf(q.free_kwh)} kWh sur ${nf(q.kwh)} couverts par le soleil`
+        v.onclick = (e) => {
+          const k = sc ? sc.pick(i, e.detail ? e.clientX : null, e.clientY, stage) : 'solar'
+          ro.innerHTML = k === 'grid'
+            ? `<b>${q.name} · réseau ${100 - q.pct} %</b> ${nf(q.kwh - q.free_kwh)} kWh achetés`
+            : `<b>${q.name} · soleil ${q.pct} %</b> ${nf(q.free_kwh)} kWh sur ${nf(q.kwh)}`
           $$('.vessel', el).forEach((o) => o.classList.toggle('on', o === v))
           gsap.fromTo($('.v-fill i', v), { rotate: -6 }, { rotate: 0, duration: 1.2, ease: 'elastic.out(1, 0.3)' })
           buzz(8)
@@ -129,7 +142,7 @@ const screens = [
       <h2 class="title split">Une saison entière d'indépendance.</h2>
       <p class="kpi"><span class="num" data-to="${D.noGrid.streak}">${D.noGrid.streak}</span><span class="unit">jours</span></p>
       <p class="kpi-sub">d'affilée sans acheter un seul kWh au réseau, du ${dayFr(D.noGrid.from, false)} au ${dayFr(D.noGrid.to, false)}.</p>
-      <p class="readout static" aria-live="polite">Glissez sur le calendrier</p>
+      <div class="cal-nav"><button class="cal-step" data-step="-1" aria-label="Jour précédent">‹</button><p class="readout static" aria-live="polite">${FINE ? 'Glissez sur le calendrier' : 'Touchez un jour, glissez pour parcourir'}</p><button class="cal-step" data-step="1" aria-label="Jour suivant">›</button></div>
       <div class="stage cal" data-explore data-cursor="Glissez"><canvas tabindex="0" aria-label="Calendrier de l'année : les jours sans achat au réseau sont dorés. Flèches pour parcourir les jours."></canvas></div>
       <ul class="legend"><li><i class="sw sw-solar dot"></i><span>Jour sans achat au réseau</span></li><li><i class="sw sw-grid dot"></i><span>Jour avec achat</span></li></ul>
       <details class="alt"><summary>Version texte</summary><p>${D.noGrid.days} jours de l'année sans aucun achat au réseau, dont ${D.noGrid.streak} jours consécutifs du ${dayFr(D.noGrid.from, false)} au ${dayFr(D.noGrid.to, false)} 2026.</p></details>`,
@@ -143,15 +156,15 @@ const screens = [
       <p class="kpi"><span class="num" data-to="${D.destocke}">${nf(D.destocke)}</span><span class="unit">kWh</span></p>
       <p class="kpi-sub">mis au coffre puis rendus, soit <b>${nf(D.battery.cycles)} fois</b> sa capacité. Pleine <b>${D.battery.fullDays} jours</b>.</p>
       <div class="readout day" aria-live="polite"><span class="d-date"></span><span class="d-lvl"></span></div>
-      <div class="stage cold vault" data-explore data-cursor="Tournez" role="img" aria-label="Coffre-fort circulaire : une barre par jour, hauteur égale au niveau de la batterie en fin de journée, sur ${D.client.cap} kWh.">
+      <div class="stage cold vault" data-explore data-cursor="Tournez" role="img" aria-label="Coffre-fort circulaire : une barre par jour, rangée intérieure les kWh mis en batterie, rangée extérieure les kWh consommés depuis la batterie.">
         <canvas class="fallback bars2d"></canvas>
       </div>
       <div class="timeline" data-explore>
         <button class="play btn-icon" aria-label="Rejouer l'année"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button>
         <input type="range" min="0" max="${days.length - 1}" value="0" aria-label="Choisir un jour" />
       </div>
-      <ul class="legend"><li><i class="sw sw-batt"></i><span>Niveau en fin de journée (sur ${D.client.cap} kWh)</span></li><li><i class="sw sw-solar"></i><span>Jour où la batterie a été pleine</span></li></ul>
-      <details class="alt"><summary>Version texte</summary><p>Votre batterie virtuelle de ${D.client.cap} kWh a stocké puis restitué ${nf(D.destocke)} kWh cette année, soit ${nf(D.battery.cycles)} cycles complets. Elle a été pleine ${D.battery.fullDays} jours, surtout de mai à septembre. Le curseur permet de lire le niveau de n'importe quel jour.</p></details>`,
+      <ul class="legend"><li><i class="sw sw-batt"></i><span>Remplissage de la batterie</span></li><li><i class="sw sw-full"></i><span>Remplissage, batterie pleine ce jour-là</span></li><li><i class="sw sw-used"></i><span>Consommé depuis la batterie</span></li></ul>
+      <details class="alt"><summary>Version texte</summary><p>Votre batterie virtuelle de ${D.client.cap} kWh a stocké puis restitué ${nf(D.destocke)} kWh cette année, soit ${nf(D.battery.cycles)} cycles complets. Elle a été pleine ${D.battery.fullDays} jours, surtout de mai à septembre. Pour chaque jour, le curseur indique les kWh mis en batterie, les kWh consommés depuis la batterie et le niveau en fin de journée.</p></details>`,
     enter(el) { countUp($('.num', el), D.destocke, 1.8); vault(el) },
   },
   // 6 — Impact
@@ -279,12 +292,12 @@ const carSVG = () => `<svg viewBox="0 0 48 24" width="44" height="22"><path d="M
 const treeSVG = () => `<svg viewBox="0 0 32 40" width="100%" height="100%"><rect x="14" y="26" width="4" height="12" rx="1" fill="#76472F"/><circle cx="16" cy="18" r="12" fill="#5ABB99"/><circle cx="11" cy="14" r="5" fill="#8fd4bb" opacity=".7"/></svg>`
 
 function printTicket(el) {
-  const lines = $$('.tl', el), sumEls = [$('.num.gain', el), $('.t-sum', el)]
+  const lines = $$('.tl', el), sumEls = [$('.t-sum', el)]
   const o = { v: 0 }, set = () => sumEls.forEach((s) => (s.textContent = sgn(Math.round(o.v), 0)))
   gsap.killTweensOf(o); set()
   const tl = gsap.timeline()
-  tl.set(lines, { opacity: 0, y: -10 }).set($('.stamp', el), { opacity: 0, scale: 2.4, rotate: -14 })
-  if (RM) { o.v = D.gain; set(); gsap.set(lines, { opacity: 1, y: 0 }); gsap.set($('.stamp', el), { opacity: 1, scale: 1 }); return }
+  tl.set(lines, { opacity: 0, y: -10 })
+  if (RM) { o.v = D.gain; set(); gsap.set(lines, { opacity: 1, y: 0 }); return }
   const order = [...D.ticket.filter((t) => t.eur < 0), ...D.ticket.filter((t) => t.eur > 0)]
   let acc = 0
   lines.forEach((li, i) => {
@@ -292,7 +305,7 @@ function printTicket(el) {
     tl.to(li, { opacity: 1, y: 0, duration: 0.35, ease: 'power3.out', onStart: () => buzz(6) }, i === 0 ? 0.2 : '>-0.05')
       .to(o, { v: acc, duration: i < 2 ? 0.35 : 0.8, ease: 'power2.out', onUpdate: set }, '<')
   })
-  tl.to($('.stamp', el), { opacity: 1, scale: 1, duration: 0.45, ease: 'back.out(3)', onStart: () => buzz(20) }, '+=0.1')
+  tl.fromTo($('.t-sum', el), { scale: 0.85 }, { scale: 1, duration: 0.5, ease: 'back.out(2.5)', onStart: () => buzz(20) }, '+=0.05')
 }
 
 function calendar(el) {
@@ -325,7 +338,14 @@ function calendar(el) {
       if (free(i)) { ctx.fillStyle = '#E8B60E'; ctx.arc(x, y, Math.min(cw, rh) * 0.34, 0, 7); ctx.fill() }
       else { ctx.fillStyle = '#9EA4A4'; ctx.arc(x, y, Math.min(cw, rh) * 0.15, 0, 7); ctx.fill() }
     }
-    if (sel >= 0) { const [x, y] = pos(sel); ctx.strokeStyle = '#032126'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, Math.min(cw, rh) * 0.55, 0, 7); ctx.stroke() }
+    if (sel >= 0) {
+      const [x, y] = pos(sel), r = Math.max(Math.min(cw, rh) * 0.55, 8)
+      ctx.strokeStyle = '#032126'; ctx.lineWidth = 2; ctx.beginPath(); ctx.arc(x, y, r, 0, 7); ctx.stroke()
+      // étiquette au-dessus du doigt : le jour reste lisible même sous le pouce
+      const t = String(dt(days[sel][0]).getDate()), bw = 30, bh = 24, bx = Math.max(left, Math.min(W - bw, x - bw / 2)), by = y - r - bh - 8 < 0 ? y + r + 8 : y - r - bh - 8
+      ctx.fillStyle = '#032126'; ctx.beginPath(); ctx.roundRect(bx, by, bw, bh, 8); ctx.fill()
+      ctx.fillStyle = '#fff'; ctx.textAlign = 'center'; ctx.font = '700 13px Inter, sans-serif'; ctx.fillText(t, bx + bw / 2, by + bh / 2 + 1); ctx.textAlign = 'left'
+    }
   }
   function pick(i) {
     sel = Math.max(0, Math.min(days.length - 1, i)); const d = days[sel]
@@ -343,9 +363,11 @@ function calendar(el) {
   cv.onpointermove = (e) => { if (down || e.pointerType === 'mouse') at(e) }
   cv.onpointerup = cv.onpointercancel = () => (down = false)
   cv.onkeydown = (e) => { const k = { ArrowRight: 1, ArrowLeft: -1, ArrowDown: 30, ArrowUp: -30 }[e.key]; if (k) { e.preventDefault(); pick((sel < 0 ? 0 : sel) + k) } }
+  $$('.cal-step', el).forEach((b) => (b.onclick = () => { buzz(3); pick((sel < 0 ? start : sel) + +b.dataset.step) }))
+  const start = Math.max(0, days.findIndex((d) => d[0] === D.noGrid.from))
   size(); new ResizeObserver(() => { size(); draw() }).observe(cv.parentElement)
   const o = { b: 0 }
-  gsap.to(o, { b: 1, duration: RM ? 0 : 2.2, ease: 'power2.inOut', onUpdate: () => { born = o.b; draw() } })
+  gsap.to(o, { b: 1, duration: RM ? 0 : 2.2, ease: 'power2.inOut', onUpdate: () => { born = o.b; draw() }, onComplete: () => sel < 0 && pick(start) })
 }
 
 function vault(el) {
@@ -356,7 +378,7 @@ function vault(el) {
     cur = i; range.value = i
     const d = days[i]
     dEl.textContent = dayFr(d[0])
-    lEl.innerHTML = `<b>${nf(d[3], 1)}</b> / ${cap} kWh au coffre${d[7] > 0 ? ' · <span class="full">pleine dans la journée</span>' : ''}`
+    lEl.innerHTML = `<span class="${d[7] > 0 ? 'full' : 'in'}">+${nf(d[5], 1)}</span> · <span class="out">−${nf(d[6], 1)}</span> kWh · <b>${nf(d[3], 0)}</b>/${cap} au coffre${d[7] > 0 ? ' · <span class="full">pleine</span>' : ''}`
     if (cv2) bars2d()
   }
   const startDay = days.findIndex((d) => d[7] > 0)
@@ -375,9 +397,12 @@ function vault(el) {
     const r = cv2.parentElement.getBoundingClientRect(), dpr = Math.min(devicePixelRatio, 2), x = cv2.getContext('2d')
     cv2.width = r.width * dpr; cv2.height = r.height * dpr; x.setTransform(dpr, 0, 0, dpr, 0, 0)
     const w = r.width / days.length, top = 16, hh = r.height - top - 8
-    x.strokeStyle = 'rgba(3,33,38,.35)'; x.setLineDash([4, 4]); x.beginPath(); x.moveTo(0, top); x.lineTo(r.width, top); x.stroke(); x.setLineDash([])
-    x.fillStyle = '#273333'; x.font = '600 12px Inter'; x.fillText(`${cap} kWh`, 4, top - 4)
-    days.forEach((d, i) => { const h = (d[3] / cap) * hh; x.fillStyle = i === cur ? '#032126' : d[7] > 0 ? '#E8B60E' : '#5DB8D5'; x.fillRect(i * w, top + hh - h, Math.max(1, w - 0.3), Math.max(1, h)) })
+    const max = Math.max(...days.map((d) => Math.max(d[5], d[6]))), mid = top + hh / 2
+    days.forEach((d, i) => { // miroir : remplissage vers le haut, consommé vers le bas
+      const a = (d[5] / max) * (hh / 2), b = (d[6] / max) * (hh / 2), bw = Math.max(1, w - 0.3)
+      x.fillStyle = i === cur ? '#032126' : d[7] > 0 ? '#5ABB99' : '#5DB8D5'; x.fillRect(i * w, mid - a, bw, Math.max(1, a))
+      x.fillStyle = i === cur ? '#032126' : '#F08A3C'; x.fillRect(i * w, mid, bw, Math.max(1, b))
+    })
   }
   range.oninput = () => { const i = +range.value; sc ? sc.setDay(i) : show(i) }
   let playing = null
