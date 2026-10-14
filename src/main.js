@@ -29,23 +29,22 @@ const screens = [
   // 1 — Accroche
   {
     html: () => `
-      <p class="eyebrow">1 an avec mylight150 · ${dayFr(D.client.since, false)} 2025 → ${dayFr(days.at(-1)[0], false)} 2026</p>
       <h1 class="title split">Votre soleil a travaillé pour vous.</h1>
       <p class="kpi"><span class="num" data-to="${D.solarShare}">${D.solarShare}</span><span class="unit">%</span></p>
-      <p class="kpi-sub">de vos <b>${nf(D.conso)} kWh</b> consommés cette année venaient de vos panneaux.</p>
+      <p class="kpi-sub">de votre électricité venait de vos panneaux.</p>
       <div class="stage warm" data-explore data-cursor="Touchez" role="img" aria-label="Sphère représentant votre consommation annuelle, remplie à ${D.solarShare} % de son volume par l'énergie solaire.">
-        <p class="readout" aria-live="polite">Touchez ou secouez la sphère</p>
+        <p class="readout" aria-live="polite">Touchez la sphère</p>
         <div class="fallback">${sphereSVG()}</div>
       </div>
       <ul class="legend">
-        <li><i class="sw sw-solar"></i><span><b>Soleil · ${nf(solarKwh)} kWh</b> ${nf(D.auto)} en direct + ${nf(D.destocke)} via la batterie</span></li>
-        <li><i class="sw sw-grid"></i><span><b>Réseau · ${nf(D.import)} kWh</b> achetés</span></li>
+        <li><i class="sw sw-solar"></i><span><b>Soleil</b> ${nf(solarKwh)} kWh</span></li>
+        <li><i class="sw sw-grid"></i><span><b>Réseau</b> ${nf(D.import)} kWh</span></li>
       </ul>
-      <details class="alt"><summary>Version texte</summary><p>Cette année, votre maison a consommé ${nf(D.conso)} kWh. ${nf(solarKwh)} kWh, soit ${D.solarShare} %, venaient de vos panneaux solaires : ${nf(D.auto)} kWh consommés en direct et ${nf(D.destocke)} kWh restitués par votre batterie virtuelle. ${nf(D.import)} kWh ont été achetés au réseau.</p></details>`,
+      <details class="alt" open><summary class="sr-only">Version texte</summary><p>Cette année, votre maison a consommé ${nf(D.conso)} kWh. ${nf(solarKwh)} kWh, soit ${D.solarShare} %, venaient de vos panneaux solaires : ${nf(D.auto)} kWh consommés en direct et ${nf(D.destocke)} kWh restitués par votre batterie virtuelle. ${nf(D.import)} kWh ont été achetés au réseau.</p></details>`,
     enter(el) {
       const ro = $('.readout', el)
       const say = (k) => {
-        ro.innerHTML = k === 'solar' ? `<b>Soleil · ${D.solarShare} %</b> ${nf(solarKwh)} kWh` : k === 'grid' ? `<b>Réseau · ${100 - D.solarShare} %</b> ${nf(D.import)} kWh achetés` : 'Touchez ou secouez la sphère'
+        ro.innerHTML = k === 'solar' ? `<b>Soleil · ${D.solarShare} %</b> ${nf(solarKwh)} kWh` : k === 'grid' ? `<b>Réseau · ${100 - D.solarShare} %</b> ${nf(D.import)} kWh achetés` : 'Touchez la sphère'
         buzz(8)
       }
       if (gl) gl.mount($('.stage', el), sphereScene({ share: D.solarShare / 100, onTouch: say }))
@@ -63,18 +62,17 @@ const screens = [
       const costs = D.ticket.filter((t) => t.eur < 0), gains = D.ticket.filter((t) => t.eur > 0)
       const line = (t) => `<li class="tl ${t.eur < 0 ? 'neg' : 'pos'}"><button class="tl-btn" aria-expanded="false"><span class="tl-lab">${t.label}</span><span class="tl-dots"></span><span class="tl-val">${sgn(t.eur)}</span></button><p class="tl-detail" hidden>${t.detail}</p></li>`
       return `
-      <p class="eyebrow">Le ticket de caisse inversé</p>
-      <h2 class="title split">Voici exactement d'où vient votre argent.</h2>
+      <h2 class="title split">D'où vient votre argent.</h2>
       <div class="ticket" data-explore>
-        <div class="t-head"><p class="brand">mylight<b>150</b></p><p>Bilan annuel · ${D.client.ville}</p><p>${new Date(D.client.since).toLocaleDateString('fr-FR')} → ${new Date(days.at(-1)[0]).toLocaleDateString('fr-FR')}</p></div>
-        <p class="t-sec">Ce que vous avez investi</p>
+        <div class="t-head"><p class="brand">mylight<b>150</b></p></div>
+        <p class="t-sec">Investi</p>
         <ul>${costs.map(line).join('')}</ul>
-        <p class="t-sec">Ce que le soleil vous a rendu</p>
+        <p class="t-sec">Rendu par le soleil</p>
         <ul>${gains.map(line).join('')}</ul>
-        <div class="t-total"><span>Gain net · tous frais déduits</span><span class="t-sum">${sgn(D.gain, 0)}</span></div>
-        <p class="t-foot">Touchez une ligne pour le détail</p>
+        <div class="t-total"><span>Gain net</span><span class="t-sum">${sgn(D.gain, 0)}</span></div>
+        <p class="t-foot">Touchez une ligne</p>
       </div>
-      <details class="alt"><summary>Version texte</summary><p>Gain net : ${eur(D.gain)}. ${D.ticket.map((t) => `${t.label} : ${sgn(t.eur)}`).join('. ')}. Calcul : énergie solaire consommée et restituée, valorisée au prix du kWh heures pleines / heures creuses, moins l'abonnement de stockage et la contribution autoproducteur.</p></details>`
+      <details class="alt" open><summary class="sr-only">Version texte</summary><p>Gain net : ${eur(D.gain)}. ${D.ticket.map((t) => `${t.label} : ${sgn(t.eur)}`).join('. ')}. Calcul : énergie solaire consommée et restituée, valorisée au prix du kWh heures pleines / heures creuses, moins l'abonnement de stockage et la contribution autoproducteur.</p></details>`
     },
     enter(el) {
       $$('.tl-btn', el).forEach((b) => (b.onclick = () => {
@@ -88,8 +86,7 @@ const screens = [
   // 3 — Équipements
   {
     html: () => `
-      <p class="eyebrow">Gratuit à X %, par équipement</p>
-      <h2 class="title split">Ce que vous faites tourner au soleil est presque offert.</h2>
+      <h2 class="title split">Au soleil, c'est presque offert.</h2>
       <p class="readout static" aria-live="polite">Touchez un équipement</p>
       <div class="stage warm vessels" data-explore data-cursor="Touchez">
         ${D.equip.map((q, i) => `
@@ -100,8 +97,7 @@ const screens = [
             <span class="v-kwh">${nf(q.kwh)} kWh/an</span>
           </button>`).join('')}
       </div>
-      <ul class="legend"><li><i class="sw sw-solar"></i><span>Part couverte par le soleil, direct ou batterie</span></li></ul>
-      <details class="alt"><summary>Version texte</summary><p>${D.equip.map((q) => `${q.name} : ${q.pct} % couvert par le soleil (${nf(q.free_kwh)} kWh sur ${nf(q.kwh)}).`).join(' ')}</p></details>`,
+      <details class="alt" open><summary class="sr-only">Version texte</summary><p>${D.equip.map((q) => `${q.name} : ${q.pct} % couvert par le soleil (${nf(q.free_kwh)} kWh sur ${nf(q.kwh)}).`).join(' ')}</p></details>`,
     enter(el) {
       const ro = $('.readout', el), stage = $('.vessels', el)
       let sc = null
@@ -124,8 +120,8 @@ const screens = [
         v.onclick = (e) => {
           const k = sc ? sc.pick(i, e.detail ? e.clientX : null, e.clientY, stage) : 'solar'
           ro.innerHTML = k === 'grid'
-            ? `<b>${q.name} · réseau ${100 - q.pct} %</b> ${nf(q.kwh - q.free_kwh)} kWh achetés`
-            : `<b>${q.name} · soleil ${q.pct} %</b> ${nf(q.free_kwh)} kWh sur ${nf(q.kwh)}`
+            ? `<b>${q.name}</b> réseau ${100 - q.pct} % · ${nf(q.kwh - q.free_kwh)} kWh`
+            : `<b>${q.name}</b> soleil ${q.pct} % · ${nf(q.free_kwh)} / ${nf(q.kwh)} kWh`
           $$('.vessel', el).forEach((o) => o.classList.toggle('on', o === v))
           gsap.fromTo($('.v-fill i', v), { rotate: -6 }, { rotate: 0, duration: 1.2, ease: 'elastic.out(1, 0.3)' })
           buzz(8)
@@ -138,23 +134,21 @@ const screens = [
   // 4 — Saison sans facture
   {
     html: () => `
-      <p class="eyebrow">La saison sans facture</p>
-      <h2 class="title split">Une saison entière d'indépendance.</h2>
+      <h2 class="title split">Une saison sans facture.</h2>
       <p class="kpi"><span class="num" data-to="${D.noGrid.streak}">${D.noGrid.streak}</span><span class="unit">jours</span></p>
-      <p class="kpi-sub">d'affilée sans acheter un seul kWh au réseau, du ${dayFr(D.noGrid.from, false)} au ${dayFr(D.noGrid.to, false)}.</p>
-      <div class="cal-nav"><button class="cal-step" data-step="-1" aria-label="Jour précédent">‹</button><p class="readout static" aria-live="polite">${FINE ? 'Glissez sur le calendrier' : 'Touchez un jour, glissez pour parcourir'}</p><button class="cal-step" data-step="1" aria-label="Jour suivant">›</button></div>
+      <p class="kpi-sub">d'affilée sans acheter au réseau.</p>
+      <div class="cal-nav"><button class="cal-step" data-step="-1" aria-label="Jour précédent">‹</button><p class="readout static" aria-live="polite">${FINE ? "Glissez sur l'année" : 'Touchez un jour'}</p><button class="cal-step" data-step="1" aria-label="Jour suivant">›</button></div>
       <div class="stage cal" data-explore data-cursor="Glissez"><canvas tabindex="0" aria-label="Calendrier de l'année : les jours sans achat au réseau sont dorés. Flèches pour parcourir les jours."></canvas></div>
-      <ul class="legend"><li><i class="sw sw-solar dot"></i><span>Jour sans achat au réseau</span></li><li><i class="sw sw-grid dot"></i><span>Jour avec achat</span></li></ul>
-      <details class="alt"><summary>Version texte</summary><p>${D.noGrid.days} jours de l'année sans aucun achat au réseau, dont ${D.noGrid.streak} jours consécutifs du ${dayFr(D.noGrid.from, false)} au ${dayFr(D.noGrid.to, false)} 2026.</p></details>`,
+      <ul class="legend"><li><i class="sw sw-solar dot"></i><span>Sans achat</span></li><li><i class="sw sw-grid dot"></i><span>Avec achat</span></li></ul>
+      <details class="alt" open><summary class="sr-only">Version texte</summary><p>${D.noGrid.days} jours de l'année sans aucun achat au réseau, dont ${D.noGrid.streak} jours consécutifs du ${dayFr(D.noGrid.from, false)} au ${dayFr(D.noGrid.to, false)} 2026.</p></details>`,
     enter(el) { countUp($('.num', el), D.noGrid.streak, 1.6); calendar(el) },
   },
   // 5 — Coffre-fort
   {
     html: () => `
-      <p class="eyebrow">La batterie comme coffre-fort</p>
-      <h2 class="title split">Votre batterie virtuelle existe, et elle travaille.</h2>
+      <h2 class="title split">Votre batterie travaille.</h2>
       <p class="kpi"><span class="num" data-to="${D.destocke}">${nf(D.destocke)}</span><span class="unit">kWh</span></p>
-      <p class="kpi-sub">mis au coffre puis rendus, soit <b>${nf(D.battery.cycles)} fois</b> sa capacité. Pleine <b>${D.battery.fullDays} jours</b>.</p>
+      <p class="kpi-sub">stockés puis rendus. Pleine <b>${D.battery.fullDays} jours</b>.</p>
       <div class="readout day" aria-live="polite"><span class="d-date"></span><span class="d-lvl"></span></div>
       <div class="stage cold vault" data-explore data-cursor="Tournez" role="img" aria-label="Coffre-fort circulaire : une barre par jour, rangée intérieure les kWh mis en batterie, rangée extérieure les kWh consommés depuis la batterie.">
         <canvas class="fallback bars2d"></canvas>
@@ -163,28 +157,27 @@ const screens = [
         <button class="play btn-icon" aria-label="Rejouer l'année"><svg viewBox="0 0 24 24" width="18" height="18"><path d="M8 5v14l11-7z" fill="currentColor"/></svg></button>
         <input type="range" min="0" max="${days.length - 1}" value="0" aria-label="Choisir un jour" />
       </div>
-      <ul class="legend"><li><i class="sw sw-batt"></i><span>Remplissage de la batterie</span></li><li><i class="sw sw-full"></i><span>Remplissage, batterie pleine ce jour-là</span></li><li><i class="sw sw-used"></i><span>Consommé depuis la batterie</span></li></ul>
-      <details class="alt"><summary>Version texte</summary><p>Votre batterie virtuelle de ${D.client.cap} kWh a stocké puis restitué ${nf(D.destocke)} kWh cette année, soit ${nf(D.battery.cycles)} cycles complets. Elle a été pleine ${D.battery.fullDays} jours, surtout de mai à septembre. Pour chaque jour, le curseur indique les kWh mis en batterie, les kWh consommés depuis la batterie et le niveau en fin de journée.</p></details>`,
+      <ul class="legend"><li><i class="sw sw-batt"></i><span>Rempli</span></li><li><i class="sw sw-full"></i><span>Rempli, pleine</span></li><li><i class="sw sw-used"></i><span>Consommé</span></li></ul>
+      <details class="alt" open><summary class="sr-only">Version texte</summary><p>Votre batterie virtuelle de ${D.client.cap} kWh a stocké puis restitué ${nf(D.destocke)} kWh cette année, soit ${nf(D.battery.cycles)} cycles complets. Elle a été pleine ${D.battery.fullDays} jours, surtout de mai à septembre. Pour chaque jour, le curseur indique les kWh mis en batterie, les kWh consommés depuis la batterie et le niveau en fin de journée.</p></details>`,
     enter(el) { countUp($('.num', el), D.destocke, 1.8); vault(el) },
   },
   // 6 — Impact
   {
     html: () => `
-      <p class="eyebrow">L'impact</p>
-      <h2 class="title split">Un effet concret au-delà de votre facture.</h2>
+      <h2 class="title split">Votre impact.</h2>
       <p class="kpi"><span class="num" data-to="${D.co2.kg}">${D.co2.kg}</span><span class="unit">kg CO₂</span></p>
-      <p class="kpi-sub">évités grâce à vos ${nf(D.prod)} kWh solaires.</p>
+      <p class="kpi-sub">évités cette année.</p>
       <div class="eq road" data-explore>
         <p><b class="km">${nf(D.co2.km)}</b> km en voiture</p>
         <div class="road-line"><span class="car" aria-hidden="true">${carSVG()}</span></div>
         <p class="small">Glissez la voiture</p>
       </div>
       <div class="eq trees" data-explore>
-        <p><b>${D.co2.trees}</b> arbres pendant un an</p>
+        <p><b>${D.co2.trees}</b> arbres</p>
         <div class="forest">${Array.from({ length: D.co2.trees }, () => `<button class="tree" aria-label="Un arbre absorbe environ 25 kg de CO₂ par an">${treeSVG()}</button>`).join('')}</div>
       </div>
-      <p class="method">Calcul : ${nf(D.prod)} kWh × 0,052 kg CO₂/kWh réseau. Voiture : 0,193 kg/km. Arbre : 25 kg/an.</p>
-      <details class="alt"><summary>Version texte</summary><p>Votre production solaire a évité ${D.co2.kg} kg de CO₂, l'équivalent de ${nf(D.co2.km)} km en voiture ou de ce qu'absorbent ${D.co2.trees} arbres en un an.</p></details>`,
+      <p class="method">0,052 kg CO₂/kWh · 0,193 kg/km · 25 kg/arbre/an</p>
+      <details class="alt" open><summary class="sr-only">Version texte</summary><p>Votre production solaire a évité ${D.co2.kg} kg de CO₂, l'équivalent de ${nf(D.co2.km)} km en voiture ou de ce qu'absorbent ${D.co2.trees} arbres en un an.</p></details>`,
     enter(el) {
       countUp($('.num', el), D.co2.kg, 1.6)
       gsap.fromTo($$('.tree', el), { scale: 0, transformOrigin: '50% 100%' }, { scale: 1, duration: RM ? 0 : 0.8, ease: 'back.out(2)', stagger: 0.06, delay: 0.3 })
@@ -195,10 +188,9 @@ const screens = [
   // 7 — Le défi
   {
     html: () => `
-      <p class="eyebrow">Le défi de l'année 2</p>
-      <h2 class="title split">Voici comment faire encore mieux, et c'est simple.</h2>
+      <h2 class="title split">Faites encore mieux.</h2>
       <p class="kpi"><span class="num chal">+0</span><span class="unit">€ / an</span></p>
-      <p class="kpi-sub">activés sur <b>${eur(leverSum)}</b> possibles. Un tap suffit.</p>
+      <p class="kpi-sub">sur <b>${eur(leverSum)}</b> possibles.</p>
       <div class="gauge" aria-hidden="true"><div class="g-track">${D.levers.map((l) => `<span class="g-seg" data-id="${l.id}" style="flex:${l.eur}"></span>`).join('')}</div></div>
       <ol class="levers">
         ${D.levers.map((l, i) => `
@@ -209,7 +201,7 @@ const screens = [
             <button class="lv-btn magnetic" aria-pressed="false"><span class="lv-on">Activé</span><span class="lv-off">Activer</span></button>
           </li>`).join('')}
       </ol>
-      <details class="alt"><summary>Version texte</summary><p>${D.levers.map((l, i) => `${i + 1}. ${l.title} : jusqu'à ${eur(l.eur)} par an. ${l.desc}`).join(' ')} Estimations calculées sur votre année, à ensoleillement et consommation identiques.</p></details>`,
+      <details class="alt" open><summary class="sr-only">Version texte</summary><p>${D.levers.map((l, i) => `${i + 1}. ${l.title} : jusqu'à ${eur(l.eur)} par an. ${l.desc}`).join(' ')} Estimations calculées sur votre année, à ensoleillement et consommation identiques.</p></details>`,
     enter(el) {
       $$('.lever', el).forEach((li) => {
         const b = $('.lv-btn', li)
@@ -222,8 +214,7 @@ const screens = [
   // 8 — Projection
   {
     html: () => `
-      <p class="eyebrow">La projection année 2</p>
-      <h2 class="title split">Voici où vous pouvez aller.</h2>
+      <h2 class="title split">Votre année 2.</h2>
       <p class="kpi"><span class="num proj">${sgn(D.gain, 0)}</span></p>
       <p class="kpi-sub proj-sub"></p>
       <div class="cols" data-explore>
@@ -235,8 +226,8 @@ const screens = [
         </div><span class="c-lab">Année 2</span></div>
       </div>
       <div class="chips">${D.levers.map((l) => `<button class="chip" data-id="${l.id}" aria-pressed="false">${l.title}</button>`).join('')}</div>
-      <p class="method">Estimation à ensoleillement et consommation identiques. Le kWh réseau passe de ${nf(D.prices.hp, 4)} à ${nf(D.prices.hp2, 3)} € en heures pleines : chaque kWh solaire vous épargne davantage (+${eur(D.proj.sameFlowsY2 - D.gain)}).</p>
-      <details class="alt"><summary>Version texte</summary><p class="alt-proj"></p></details>`,
+      <p class="method">Estimation à soleil et conso identiques. Le kWh passe à ${nf(D.prices.hp2, 3)} € : +${eur(D.proj.sameFlowsY2 - D.gain)}.</p>
+      <details class="alt" open><summary class="sr-only">Version texte</summary><p class="alt-proj"></p></details>`,
     enter(el) {
       $$('.chip', el).forEach((c) => (c.onclick = () => toggleLever(c.dataset.id)))
       syncLevers(true)
@@ -245,16 +236,15 @@ const screens = [
   // 9 — Partage
   {
     html: () => `
-      <p class="eyebrow">Le partage</p>
-      <h2 class="title split">Fier de le montrer, facile à partager.</h2>
+      <h2 class="title split">Partagez votre année.</h2>
       <div class="share-card" id="card"></div>
-      <fieldset class="opts"><legend>Choisissez 3 chiffres à montrer</legend>
+      <fieldset class="opts"><legend>3 chiffres à montrer</legend>
         ${shareOpts().map((o) => `<label class="opt"><input type="checkbox" value="${o.id}" ${state.share.has(o.id) ? 'checked' : ''}/><span>${o.label}</span></label>`).join('')}
       </fieldset>
       <label class="opt toggle"><input type="checkbox" id="showName"/><span>Afficher mon prénom</span></label>
       <div class="share-actions">
         <button class="btn-next magnetic" id="doShare"><span>Partager ma carte</span></button>
-        <button class="btn-ghost magnetic" id="doRef"><span>Copier mon lien de parrainage</span></button>
+        <button class="btn-ghost magnetic" id="doRef"><span>Copier mon lien</span></button>
       </div>
       <p class="toast" role="status" aria-live="polite"></p>`,
     enter(el) {
@@ -327,7 +317,7 @@ function calendar(el) {
   function draw() {
     ctx.clearRect(0, 0, W, H)
     ctx.font = '600 12px Inter, sans-serif'; ctx.fillStyle = '#495858'; ctx.textBaseline = 'middle'
-    rows.forEach((r, m) => { const d = dt(days[r[0]][0]); ctx.fillText(MONTHS[d.getMonth()].slice(0, 4) + (d.getMonth() === 0 || m === 0 ? ` ${String(d.getFullYear()).slice(2)}` : ''), 0, 8 + (m + 0.5) * rh) })
+    rows.forEach((r, m) => { const d = dt(days[r[0]][0]); ctx.fillText(['janv.','févr.','mars','avr.','mai','juin','juil.','août','sept.','oct.','nov.','déc.'][d.getMonth()] + (d.getMonth() === 0 || m === 0 ? ` ${String(d.getFullYear()).slice(2)}` : ''), 0, 8 + (m + 0.5) * rh) })
     const n = Math.floor(born * days.length)
     // fils de la constellation : jours sans réseau qui s'enchaînent
     ctx.strokeStyle = 'rgba(232,182,14,.55)'; ctx.lineWidth = 2
@@ -378,7 +368,7 @@ function vault(el) {
     cur = i; range.value = i
     const d = days[i]
     dEl.textContent = dayFr(d[0])
-    lEl.innerHTML = `<span class="${d[7] > 0 ? 'full' : 'in'}">+${nf(d[5], 1)}</span> · <span class="out">−${nf(d[6], 1)}</span> kWh · <b>${nf(d[3], 0)}</b>/${cap} au coffre${d[7] > 0 ? ' · <span class="full">pleine</span>' : ''}`
+    lEl.innerHTML = `<span class="${d[7] > 0 ? 'full' : 'in'}">+${nf(d[5], 1)}</span> · <span class="out">−${nf(d[6], 1)}</span> kWh · <b>${nf(d[3], 0)}</b>/${cap}${d[7] > 0 ? ' · <span class="full">pleine</span>' : ''}`
     if (cv2) bars2d()
   }
   const startDay = days.findIndex((d) => d[7] > 0)
@@ -454,7 +444,7 @@ function syncLevers(instant) {
   // projection
   const y2 = D.proj.sameFlowsY2 + sum
   const p = $('.num.proj'); if (p) p.textContent = sgn(y2, 0)
-  const ps = $('.proj-sub'); if (ps) ps.innerHTML = `en année 2, soit <b>${sgn(y2 - D.gain, 0)}</b> par rapport à cette année${sum ? '' : '. Activez un levier pour aller plus loin'}.`
+  const ps = $('.proj-sub'); if (ps) ps.innerHTML = `soit <b>${sgn(y2 - D.gain, 0)}</b> vs cette année.`
   const c2 = $('.c2'); if (c2) c2.textContent = eur(y2)
   const alt = $('.alt-proj'); if (alt) alt.textContent = `Année 1 : ${eur(D.gain)}. Année 2 estimée : ${eur(y2)}, dont ${eur(D.proj.sameFlowsY2 - D.gain)} liés à la hausse du prix du kWh et ${eur(sum)} grâce aux leviers activés.`
   const max = D.proj.sameFlowsY2 + leverSum
