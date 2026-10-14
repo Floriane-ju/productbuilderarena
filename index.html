@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+  <meta name="theme-color" content="#F9FAFB" />
+  <title>Votre année d'énergie · mylight150</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+</head>
+<body>
+  <div class="cursor" aria-hidden="true"><span class="cursor-dot"></span><span class="cursor-ring"><em></em></span></div>
+
+  <div class="preloader" aria-hidden="true">
+    <svg class="pre-sun" viewBox="0 0 120 120"><circle cx="60" cy="60" r="44" /></svg>
+    <p class="pre-brand">mylight<b>150</b></p>
+    <p class="pre-txt">Votre année d'énergie est prête</p>
+  </div>
+
+  <main class="phone" id="app" aria-roledescription="story">
+    <header class="top">
+      <div class="progress" aria-hidden="true"></div>
+      <div class="top-row">
+        <p class="brand">mylight<b>150</b></p>
+        <button class="btn-icon magnetic" id="close" aria-label="Quitter le bilan">
+          <svg viewBox="0 0 24 24" width="22" height="22"><path d="M6 6l12 12M18 6L6 18" stroke="currentColor" stroke-width="2" stroke-linecap="round"/></svg>
+        </button>
+      </div>
+    </header>
+    <div class="screens" id="screens" aria-live="polite"></div>
+    <nav class="bottom" aria-label="Navigation du bilan">
+      <button class="btn-nav magnetic" id="prev" aria-label="Écran précédent">
+        <svg viewBox="0 0 24 24" width="22" height="22"><path d="M15 5l-7 7 7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+      <p class="count" id="count">1 / 9</p>
+      <button class="btn-next magnetic" id="next"><span>Suivant</span>
+        <svg viewBox="0 0 24 24" width="20" height="20"><path d="M9 5l7 7-7 7" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+      </button>
+    </nav>
+    <div class="quit" id="quit" hidden>
+      <p class="brand">mylight<b>150</b></p>
+      <h2>Votre bilan vous attend.</h2>
+      <p>Il reste disponible dans l'app, toute l'année.</p>
+      <button class="btn-next magnetic" id="resume"><span>Reprendre</span></button>
+    </div>
+  </main>
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
